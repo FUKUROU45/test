@@ -1,6 +1,7 @@
 # Streamlitライブラリをインポート
 import streamlit as st
-
+import random
+ 
 # ページ設定（タブに表示されるタイトル、表示幅）
 st.set_page_config(page_title="タイトル", layout="wide")
 
@@ -8,7 +9,7 @@ st.set_page_config(page_title="タイトル", layout="wide")
 st.title('FUKUROU45')
 
 # テキスト入力ボックスを作成し、ユーザーからの入力を受け取る
-user_input = st.text_input('')
+user_input = st.text_input('あなたの名前を入力してください')
 
 # ボタンを作成し、クリックされたらメッセージを表示
 if st.button('挨拶する'):
@@ -39,5 +40,5 @@ if st.bytton('乱数を生成'):
     #最小値と最大値の間で乱数を生成
     randam_num = randam.randint(min_val,max_val)
     st.write(f'生成された乱数：{ramdom_num}')
-    
+
 
