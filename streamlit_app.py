@@ -1,7 +1,6 @@
 # Streamlitライブラリをインポート
 import streamlit as st
-import random
- 
+import random 
 # ページ設定（タブに表示されるタイトル、表示幅）
 st.set_page_config(page_title="タイトル", layout="wide")
 
@@ -38,7 +37,7 @@ max_val = st.number_input('最大値を入力してください' , value=10)
 #乱数生成ボタンを設置
 if st.bytton('乱数を生成'):
     #最小値と最大値の間で乱数を生成
-    randam_num = randam.randint(min_val,max_val)
-    st.write(f'生成された乱数：{ramdom_num}')
+    random_num = random.randint(min_val,max_val)
+    st.write(f'生成された乱数：{random_num}')
 
 
