@@ -1,38 +1,43 @@
 import streamlit as st
-from PIL import Image
-import time
+import random
 
-st.title("清瀧でGO！🚆")
+# 漢字とその読み
+kanji_dict = {
+    "日": "にち",
+    "月": "つき",
+    "火": "ひ",
+    "水": "みず",
+    "木": "き",
+    "金": "きん",
+    "土": "ど",
+    "山": "やま",
+    "川": "かわ",
+    "鳥": "とり"
+}
 
-# 画像の表示（清瀧駅）
-st.subheader("現在地：清瀧駅")
-image = Image.open("kiyotaki_station.jpg")  # 手元にある清瀧駅の写真など
-st.image(image, caption="清瀧駅ホーム", use_column_width=True)
+# 漢字のリスト
+kanji_list = list(kanji_dict.keys())
 
-# 速度調整スライダー
-speed = st.slider("速度（km/h）", 0, 120, 0, 5)
+# タイトル
+st.title("漢字でGO！ 🚀")
 
-# 運転開始ボタン
-if st.button("運転開始！"):
-    st.write("発車します！")
-    for s in range(0, speed, 5):
-        st.write(f"加速中… 現在の速度: {s} km/h")
-        time.sleep(0.5)
-    st.success("走行中！")
+# クイズ
+st.subheader("この漢字の読みを当ててください！")
 
-# 停車テスト
-st.subheader("ブレーキテスト")
-if st.button("ブレーキ！"):
-    st.warning("減速中...")
-    for s in range(speed, -1, -10):
-        st.write(f"速度: {s} km/h")
-        time.sleep(0.5)
-    st.success("停止しました。")
+# ランダムに漢字を選ぶ
+current_kanji = random.choice(kanji_list)
 
-# 評価（簡易）
-st.subheader("運転評価")
-if st.button("評価する"):
-    if speed <= 80:
-        st.success("安全運転です！")
+# ユーザー入力
+user_answer = st.text_input(f"漢字: {current_kanji}", "")
+
+# 正解判定
+if user_answer:
+    if user_answer == kanji_dict[current_kanji]:
+        st.success("正解！🎉")
     else:
-        st.error("速度超過！もっとゆっくり運転しましょう。")
+        st.error(f"間違い！正しい読みは「{kanji_dict[current_kanji]}」です。")
+
+# 次の問題
+if st.button("次の問題"):
+    current_kanji = random.choice(kanji_list)
+    st.experimental_rerun()
