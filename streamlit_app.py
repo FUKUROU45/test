@@ -1,24 +1,18 @@
 import streamlit as st
+import pandas as pd
 
-# アプリのタイトル
-st.title("漢字リスト表示")
+st.title("Excel 漢字リスト表示アプリ")
 
-# ファイルアップロード
-uploaded_file = st.file_uploader("漢字リストをアップロードしてください（テキストファイル）", type=["txt"])
+# Excelファイルをアップロード
+uploaded_file = st.file_uploader("Excelファイル（.xlsx）をアップロードしてください", type=["xlsx"])
 
 if uploaded_file is not None:
-    # ファイルを読み込み、内容を表示
-    content = uploaded_file.read().decode("utf-8")
-    kanji_list = content.splitlines()
+    # ExcelをDataFrameに読み込む
+    df = pd.read_excel(uploaded_file)
 
-    # 漢字リストを表示
-    st.subheader("読み込んだ漢字リスト:")
-    for kanji in kanji_list:
-        st.write(kanji)
+    # データフレームの内容を表示
+    st.subheader("読み込んだデータ")
+    st.dataframe(df)
 
 else:
-    # ファイルがアップロードされていない場合
-    st.info("漢字リストをアップロードしてください。")
-
-
-
+    st.info("左上のボタンからExcelファイルをアップロードしてください。")
