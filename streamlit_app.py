@@ -1,18 +1,52 @@
+# vocab_data.py などに保存可
+word_list = [
+    {"word": "apple", "meaning": "りんご"},
+    {"word": "book", "meaning": "本"},
+    {"word": "car", "meaning": "車"},
+    {"word": "dog", "meaning": "犬"},
+    {"word": "elephant", "meaning": "象"},
+]
+
+# vocab_learning_app.py
+
 import streamlit as st
-import pandas as pd
+import random
+from vocab_data import word_list  # 単語リストを別ファイルにしてもOK
 
-st.title("Excel 漢字リスト表示アプリ")
+# セッションステートの初期化
+if "index" not in st.session_state:
+    st.session_state.index = 0
+    st.session_state.show_answer = False
+    st.session_state.score = {"correct": 0, "incorrect": 0}
 
-# Excelファイルをアップロード
-uploaded_file = st.file_uploader("Excelファイル（.xlsx）をアップロードしてください", type=["xlsx"])
+# 現在の単語
+word_data = word_list[st.session_state.index]
 
-if uploaded_file is not None:
-    # ExcelをDataFrameに読み込む
-    df = pd.read_excel(uploaded_file)
+st.title("📘 単語学習アプリ")
 
-    # データフレームの内容を表示
-    st.subheader("読み込んだデータ")
-    st.dataframe(df)
+# 単語の表示
+st.subheader(f"単語: {word_data['word']}")
 
+# ボタンで答えを表示
+if not st.session_state.show_answer:
+    if st.button("答えを見る"):
+        st.session_state.show_answer = True
 else:
-    st.info("左上のボタンからExcelファイルをアップロードしてください。")
+    st.markdown(f"👉 意味: **{word_data['meaning']}**")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("正解！"):
+            st.session_state.score["correct"] += 1
+            st.session_state.show_answer = False
+            st.session_state.index = (st.session_state.index + 1) % len(word_list)
+    with col2:
+        if st.button("不正解..."):
+            st.session_state.score["incorrect"] += 1
+            st.session_state.show_answer = False
+            st.session_state.index = (st.session_state.index + 1) % len(word_list)
+
+# スコアの表示
+st.markdown("---")
+st.markdown(f"✅ 正解: {st.session_state.score['correct']}回")
+st.markdown(f"❌ 不正解: {st.session_state.score['incorrect']}回")
+
