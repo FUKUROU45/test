@@ -1,29 +1,15 @@
 import streamlit as st
 import random
 
-st.title("ジャンケンゲーム")
+# タイトルと説明
+st.title("占いアプリ")
+st.write("あなたの運勢を占ってみましょう！")
 
-# ジャンケンの手
-hands = ["グー", "チョキ", "パー"]
+# ボタンを作成
+if st.button('占いを始める'):
+    # 占いの結果をランダムに生成
+    results = ["大吉", "中吉", "小吉", "凶"]
+    result = random.choice(results)
 
-# ユーザーが選択
-user_choice = st.radio("あなたの手を選んでください", hands)
-
-if st.button("勝負！"):
-    # コンピューターの手をランダムに選ぶ
-    comp_choice = random.choice(hands)
-    st.write(f"コンピューターの手は: {comp_choice}")
-
-    # 勝敗判定
-    if user_choice == comp_choice:
-        st.write("引き分けです！")
-    elif (user_choice == "グー" and comp_choice == "チョキ") or \
-         (user_choice == "チョキ" and comp_choice == "パー") or \
-         (user_choice == "パー" and comp_choice == "グー"):
-        st.write("あなたの勝ち！🎉")
-    else:
-        st.write("あなたの負け…😢")
-
-
-
-
+    # 結果を表示
+    st.write(f"あなたの運勢は：{result}")
