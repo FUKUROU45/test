@@ -34,6 +34,5 @@ if st.button("答える"):
         st.experimental_rerun()
 
 # スコア表示
-st.write(f"✅ 正解数: {st.session_state.score} / {st.session_state.total}")
-
+st.write(f"✅ 正解数: {st.session_state.score} / {st.session_state.total}"）
 
