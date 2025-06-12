@@ -1,38 +1,36 @@
 import streamlit as st
 import random
 
-st.title("🧠 方程式クイズ")
+st.title("📐 数学公式 暗記＆クイズ")
 
-# スコア記録
-if "score" not in st.session_state:
-    st.session_state.score = 0
-    st.session_state.total = 0
+# 数学の公式データ（拡張可能）
+formulas = {
+    "円の面積": "πr²",
+    "三角形の面積": "1/2 × 底辺 × 高さ",
+    "長方形の面積": "縦 × 横",
+    "円周の長さ": "2πr",
+    "二次方程式の解の公式": "x = (-b ± √(b² - 4ac)) / 2a"
+}
 
-# ランダムな係数を生成
-a = random.randint(1, 9)
-x_answer = random.randint(1, 10)
-b = random.randint(-10, 10)
-c = a * x_answer + b
+# モード選択
+mode = st.selectbox("モードを選んでください", ["📖 公式を見る", "🧠 クイズに挑戦"])
 
-# 問題を表示
-st.subheader("次の方程式を解いて、x の値を答えてください：")
-st.latex(f"{a}x {'+' if b >= 0 else '-'} {abs(b)} = {c}")
+# 📖 モード1: 公式一覧を見る
+if mode == "📖 公式を見る":
+    st.subheader("数学の基本公式一覧")
+    for name, formula in formulas.items():
+        st.markdown(f"**{name}**: ${formula}$")
 
-# 解答欄
-user_input = st.number_input("x =", step=1.0, format="%.2f")
+# 🧠 モード2: クイズに挑戦
+elif mode == "🧠 クイズに挑戦":
+    st.subheader("これは何の公式？")
 
-# 回答処理
-if st.button("答える"):
-    st.session_state.total += 1
-    if abs(user_input - x_answer) < 0.001:
-        st.success("正解です！🎉")
-        st.session_state.score += 1
-    else:
-        st.error(f"不正解です。正解は x = {x_answer} です。")
+    # ランダムに正解の公式を1つ選ぶ
+    correct_key = random.choice(list(formulas.keys()))
+    correct_formula = formulas[correct_key]
 
-    if st.button("次の問題へ"):
-        st.experimental_rerun()
-
-# スコア表示
-st.write(f"✅ 正解数: {st.session_state.score} / {st.session_state.total}"）
+    # 他の選択肢を作る
+    other_keys = list(formulas.keys())
+    other_keys.remove(correct_key)
+    choices = random.sample(other_keys, 3) + [correc]()_
 
