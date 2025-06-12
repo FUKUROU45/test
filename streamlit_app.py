@@ -15,7 +15,7 @@ word_dict = {
     "friend": "友達"
 }
 
-st.title("📚 英単語の意味当てクイズ")
+st.title("📚 英単語の意味はなんぞや")
 
 # 単語の選出
 if "current_word" not in st.session_state:
