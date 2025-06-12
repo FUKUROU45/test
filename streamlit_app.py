@@ -2,7 +2,7 @@ import streamlit as st
 import random
 
 # タイトルと説明
-st.title("占いアプリ")
+st.title("うらない！")
 st.write("あなたの運勢を占ってみましょう！")
 
 # ボタンを作成
