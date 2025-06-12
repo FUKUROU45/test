@@ -1,67 +1,44 @@
 import streamlit as st
+import random
 
-st.title("⭕✖️ マルバツゲーム")
+st.title("🧮 数学クイズ - 四則演算")
 
-# セッションステートで盤面とターンを管理
-if "board" not in st.session_state:
-    st.session_state.board = [["" for _ in range(3)] for _ in range(3)]
-    st.session_state.turn = "⭕"  # 先攻は⭕
-    st.session_state.winner = None
+# スコアの初期化
+if "score" not in st.session_state:
+    st.session_state.score = 0
+    st.session_state.total = 0
 
-def check_winner(board):
-    # 横・縦・斜めで3つ揃っているかチェック
-    lines = []
+# 問題の生成
+operators = ["+", "-", "*", "/"]
+a = random.randint(1, 20)
+b = random.randint(1, 20)
+op = random.choice(operators)
 
-    # 横
-    lines.extend(board)
-    # 縦
-    lines.extend([[board[r][c] for r in range(3)] for c in range(3)])
-    # 斜め
-    lines.append([board[i][i] for i in range(3)])
-    lines.append([board[i][2 - i] for i in range(3)])
+# わり算のゼロ除算回避
+if op == "/":
+    b = random.randint(1, 10)  # bをゼロ以外に
 
-    for line in lines:
-        if line == ["⭕", "⭕", "⭕"]:
-            return "⭕"
-        if line == ["✖️", "✖️", "✖️"]:
-            return "✖️"
-    return None
+# 問題表示
+st.subheader("次の計算をしてください：")
+st.latex(f"{a} {op} {b}")
 
-def board_full(board):
-    for row in board:
-        if "" in row:
-            return False
-    return True
+# 正解を計算
+if op == "+":
+    correct = a + b
+elif op == "-":
+    correct = a - b
+elif op == "*":
+    correct = a * b
+elif op == "/":
+    correct = round(a / b, 2)  # 少数第2位まで
 
-# ボタンでマスをクリックするとマークを置く処理
-for r in range(3):
-    cols = st.columns(3)
-    for c in range(3):
-        label = st.session_state.board[r][c] if st.session_state.board[r][c] != "" else " "
-        if cols[c].button(label, key=f"{r}-{c}"):
-            if st.session_state.winner or st.session_state.board[r][c] != "":
-                # 勝者がいるか、すでにマークがあれば何もしない
-                pass
-            else:
-                st.session_state.board[r][c] = st.session_state.turn
-                st.session_state.winner = check_winner(st.session_state.board)
-                if st.session_state.winner:
-                    st.success(f"勝者は {st.session_state.winner} です！")
-                elif board_full(st.session_state.board):
-                    st.info("引き分けです！")
-                    st.session_state.winner = "引き分け"
-                else:
-                    # ターン交代
-                    st.session_state.turn = "✖️" if st.session_state.turn == "⭕" else "⭕"
+# ユーザーの解答入力
+user_answer = st.number_input("答えを入力（小数は小数第2位まで）", step=0.01)
 
-st.write(f"現在のターン: {st.session_state.turn}")
+# 答えるボタン
+if st.button("答える"):
+    st.sess
 
-# リセットボタン
-if st.button("ゲームをリセット"):
-    st.session_state.board = [["" for _ in range(3)] for _ in range(3)]
-    st.session_state.turn = "⭕"
-    st.session_state.winner = None
-    st.experimental_rerun()
 
 
 
