@@ -37,7 +37,7 @@ user_choice = st.radio("選択肢から選んでください", st.session_state.
 # 回答ボタン
 if st.button("答える"):
     if user_choice == st.session_state.correct_meaning:
-        st.success("正解です！")
+        st.success("正解です！?!?!?!?!?")
     else:
         st.error(f"残念！正解は「{st.session_state.correct_meaning}」でした。")
 
