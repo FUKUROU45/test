@@ -1,45 +1,44 @@
 import streamlit as st
 import random
+import time
 
-# タイトル
-st.title("🧮 計算問題にチャレンジ！")
+st.title("🧠 記憶力トレーニング")
 
-# 問題の種類を選択
-operation = st.selectbox("問題の種類を選んでください", ["足し算", "引き算", "掛け算", "割り算"])
+# ステップ1: ランダムな数字列を生成
+if 'step' not in st.session_state:
+    st.session_state.step = 1
+    st.session_state.numbers = []
 
-# 数値をランダムに生成
-num1 = random.randint(1, 10)
-num2 = random.randint(1, 10)
+if st.session_state.step == 1:
+    if st.button("数字を表示"):
+        st.session_state.numbers = [random.randint(0, 9) for _ in range(5)]
+        st.session_state.step = 2
 
-# 問題の作成
-if operation == "足し算":
-    correct_answer = num1 + num2
-    question = f"{num1} + {num2} = ?"
-elif operation == "引き算":
-    correct_answer = num1 - num2
-    question = f"{num1} - {num2} = ?"
-elif operation == "掛け算":
-    correct_answer = num1 * num2
-    question = f"{num1} × {num2} = ?"
-else:  # 割り算
-    # 割り切れるようにする
-    correct_answer = num1
-    num1 = num1 * num2
-    question = f"{num1} ÷ {num2} = ?"
+elif st.session_state.step == 2:
+    st.write("覚えてください：")
+    st.write(" ".join(str(n) for n in st.session_state.numbers))
+    time.sleep(3)  # 表示時間
+    st.session_state.step = 3
+    st.experimental_rerun()
 
-# 問題を表示
-st.subheader("問題:")
-st.write(question)
+elif st.session_state.step == 3:
+    st.write("入力してください：")
+    user_input = st.text_input("スペースで区切って入力（例: 1 3 5 7 9）")
 
-# ユーザーの解答を入力
-user_answer = st.number_input("あなたの答えを入力してください", step=1, format="%d")
+    if st.button("答える"):
+        try:
+            user_numbers = list(map(int, user_input.strip().split()))
+            if user_numbers == st.session_state.numbers:
+                st.success("正解です！👏")
+            else:
+                st.error(f"残念、不正解。正解は {' '.join(map(str, st.session_state.numbers))} でした。")
+        except:
+            st.error("入力形式が正しくありません。")
+        # 再挑戦
+        if st.button("もう一度挑戦"):
+            st.session_state.step = 1
+            st.experimental_rerun()
 
-# 回答ボタン
-if st.button("答える"):
-    if user_answer == correct_answer:
-        st.success("正解です！🎉")
-    else:
-        st.error(f"不正解です。正しい答えは {correct_answer} です。")
 
 
 
