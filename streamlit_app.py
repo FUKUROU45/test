@@ -1,61 +1,47 @@
 import streamlit as st
 import random
-import sympy as sp
-
-# シンボル定義
-x = sp.Symbol('x')
-
-# 問題生成関数（因数分解）
-def generate_factor_problem():
-    # 例：(x + a)(x + b) の形
-    a = random.randint(-10, 10)
-    b = random.randint(-10, 10)
-    factored = (x + a) * (x + b)
-    expanded = sp.expand(factored)
-    question = expanded
-    answer = factored
-    return question, answer
-
-# 初期化
-if "score" not in st.session_state:
-    st.session_state.score = 0
-if "question" not in st.session_state:
-    q, a = generate_factor_problem()
-    st.session_state.question = q
-    st.session_state.answer = a
 
 # タイトル
-st.title("🧩 因数分解クイズ")
-st.markdown("次の式を**因数分解**せよ：")
-st.latex(sp.latex(st.session_state.question))
+st.title("🧮 計算問題にチャレンジ！")
 
-# ユーザー入力
-user_input = st.text_input("因数分解した形を (x + a)(x + b) のように入力してください：")
+# 問題の種類を選択
+operation = st.selectbox("問題の種類を選んでください", ["足し算", "引き算", "掛け算", "割り算"])
 
-if st.button("答え合わせ"):
-    try:
-        # 入力をsympy式に変換
-        user_expr = sp.sympify(user_input)
-        
-        # 展開して比較（同値ならOKとする）
-        correct = sp.expand(user_expr) == sp.expand(st.session_state.answer)
+# 数値をランダムに生成
+num1 = random.randint(1, 10)
+num2 = random.randint(1, 10)
 
-        if correct:
-            st.success("🎉 正解です！")
-            st.session_state.score += 1
-        else:
-            st.error(f"❌ 不正解です。正しい答えは `{sp.pretty(st.session_state.answer)}`")
-        
-        # 次の問題へ
-        q, a = generate_factor_problem()
-        st.session_state.question = q
-        st.session_state.answer = a
+# 問題の作成
+if operation == "足し算":
+    correct_answer = num1 + num2
+    question = f"{num1} + {num2} = ?"
+elif operation == "引き算":
+    correct_answer = num1 - num2
+    question = f"{num1} - {num2} = ?"
+elif operation == "掛け算":
+    correct_answer = num1 * num2
+    question = f"{num1} × {num2} = ?"
+else:  # 割り算
+    # 割り切れるようにする
+    correct_answer = num1
+    num1 = num1 * num2
+    question = f"{num1} ÷ {num2} = ?"
 
-    except Exception as e:
-        st.error(f"⚠️ 入力エラー: {e}")
+# 問題を表示
+st.subheader("問題:")
+st.write(question)
 
-# スコア表示
-st.markdown(f"**現在のスコア：{st.session_state.score}**")
+# ユーザーの解答を入力
+user_answer = st.number_input("あなたの答えを入力してください", step=1, format="%d")
+
+# 回答ボタン
+if st.button("答える"):
+    if user_answer == correct_answer:
+        st.success("正解です！🎉")
+    else:
+        st.error(f"不正解です。正しい答えは {correct_answer} です。")
+
+
 
 
 
