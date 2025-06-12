@@ -76,3 +76,4 @@ if st.button("答え合わせ"):
     st.session_state.question, st.session_state.answer, st.session_state.type = generate_problem()
 
 st.markdown(f"**スコア：{st.session_state.score}**")
+
