@@ -1,6 +1,6 @@
 import streamlit as st
 import random
-import as sp
+import sympy as sp
 
 # 問題生成関数
 def generate_problem():
