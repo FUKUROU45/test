@@ -34,3 +34,4 @@ elif mode == "🧠 クイズに挑戦":
     other_keys.remove(correct_key)
     choices = random.sample(other_keys, 3) + [correc]()_
 
+
