@@ -1,27 +1,51 @@
 import streamlit as st
+import numpy as np
+import matplotlib.pyplot as plt
+from sympy import symbols, Eq, sympify
 
-st.title("四則演算ウェブアプリ")
+# タイトル
+st.title("関数の問題を解こう")
 
-# ユーザー入力
-num1 = st.number_input("1つ目の数値を入力してください", value=0.0)
-num2 = st.number_input("2つ目の数値を入力してください", value=0.0)
+# 数式入力（ユーザー）
+expression = st.text_input("関数を入力してください（例: x**2 + 2*x + 1）", "x**2 + 2*x + 1")
 
-operation = st.selectbox("演算子を選んでください", ("足し算 (+)", "引き算 (-)", "掛け算 (×)", "割り算 (÷)"))
+# x のシンボル
+x = symbols('x')
 
-# 計算
-def calculate(n1, n2, op):
-    if op == "足し算 (+)":
-        return n1 + n2
-    elif op == "引き算 (-)":
-        return n1 - n2
-    elif op == "掛け算 (×)":
-        return n1 * n2
-    elif op == "割り算 (÷)":
-        if n2 == 0:
-            return "エラー（0で割ることはできません）"
-        return n1 / n2
+# 数式を解析する
+try:
+    func = sympify(expression)
+except:
+    st.error("無効な数式です。正しい数式を入力してください。")
+    func = None
 
-# ボタンで実行
-if st.button("計算する"):
-    result = calculate(num1, num2, operation)
-    st.success(f"計算結果： {result}")
+# 関数を描画する
+if func:
+    st.subheader("関数のグラフを表示")
+    
+    # xの範囲を設定
+    x_vals = np.linspace(-10, 10, 400)
+    y_vals = np.array([float(func.subs(x, val)) for val in x_vals])
+
+    # グラフを描画
+    plt.figure(figsize=(8, 6))
+    plt.plot(x_vals, y_vals, label=str(func))
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title(f"グラフ: y = {func}")
+    plt.grid(True)
+    plt.axhline(0, color='black',linewidth=0.5)
+    plt.axvline(0, color='black',linewidth=0.5)
+    plt.legend(loc="upper left")
+    
+    st.pyplot(plt)
+
+    # 特定の x 値で関数を計算
+    x_value = st.number_input("x の値を入力してください", value=0)
+    
+    try:
+        y_value = func.subs(x, x_value)
+        st.write(f"f({x_value}) = {y_value}")
+    except:
+        st.error("関数の計算に失敗しました。")
+
