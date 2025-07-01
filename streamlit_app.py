@@ -1,45 +1,27 @@
 import streamlit as st
-import random
 
-st.title("🧮 数学クイズ - 四則演算")
+st.title("四則演算ウェブアプリ")
 
-# スコアの初期化
-if "score" not in st.session_state:
-    st.session_state.score = 0
-    st.session_state.total = 0
+# ユーザー入力
+num1 = st.number_input("1つ目の数値を入力してください", value=0.0)
+num2 = st.number_input("2つ目の数値を入力してください", value=0.0)
 
-# 問題の生成
-operators = ["+", "-", "*", "/"]
-a = random.randint(1, 20)
-b = random.randint(1, 20)
-op = random.choice(operators)
+operation = st.selectbox("演算子を選んでください", ("足し算 (+)", "引き算 (-)", "掛け算 (×)", "割り算 (÷)"))
 
-# わり算のゼロ除算回避
-if op == "/":
-    b = random.randint(1, 10)  # bをゼロ以外に
+# 計算
+def calculate(n1, n2, op):
+    if op == "足し算 (+)":
+        return n1 + n2
+    elif op == "引き算 (-)":
+        return n1 - n2
+    elif op == "掛け算 (×)":
+        return n1 * n2
+    elif op == "割り算 (÷)":
+        if n2 == 0:
+            return "エラー（0で割ることはできません）"
+        return n1 / n2
 
-# 問題表示
-st.subheader("次の計算をしてください：")
-st.latex(f"{a} {op} {b}")
-
-# 正解を計算
-if op == "+":
-    correct = a + b
-elif op == "-":
-    correct = a - b
-elif op == "*":
-    correct = a * b
-elif op == "/":
-    correct = round(a / b, 2)  # 少数第2位まで
-
-# ユーザーの解答入力
-user_answer = st.number_input("答えを入力（小数は小数第2位まで）", step=0.01)
-
-# 答えるボタン
-if st.button("答える"):
-    st.sess
-
-
-
-
-
+# ボタンで実行
+if st.button("計算する"):
+    result = calculate(num1, num2, operation)
+    st.success(f"計算結果： {result}")
