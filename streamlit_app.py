@@ -1,39 +1,38 @@
 import streamlit as st
 import random
+import time
 
-st.title("📝 英検3級レベルクイズ")
+st.title("🧠 暗算トレーニング")
 
-# 問題リスト（選択式）
-quiz_list = [
-    {
-        "question": "She ___ to school every day.",
-        "choices": ["go", "goes", "went", "going"],
-        "answer": "goes"
-    },
-    {
-        "question": "I have a ( ) in my bag. — It's red.",
-        "choices": ["pen", "apple", "car", "dog"],
-        "answer": "apple"
-    },
-    {
-        "question": "A: How are you?  B: ___.",
-        "choices": ["I'm fine, thank you", "Nice to meet you", "See you", "Good night"],
-        "answer": "I'm fine, thank you"
-    },
-    {
-        "question": "The opposite of 'fast' is ___.",
-        "choices": ["slow", "quick", "long", "short"],
-        "answer": "slow"
-    },
-    {
-        "question": "Which word means '重要な' in English?",
-        "choices": ["important", "interesting", "beautiful", "exciting"],
-        "answer": "important"
-    }
-]
+# 設定（範囲・演算子）
+operators = ["＋", "－", "×", "÷"]
 
-# セッション状態を初期化
-if "current_q" not i_
+def generate_problem():
+    op = random.choice(operators)
+    if op == "＋":
+        a, b = random.randint(10, 99), random.randint(10, 99)
+        ans = a + b
+    elif op == "－":
+        a, b = random.randint(50, 99), random.randint(10, 49)
+        ans = a - b
+    elif op == "×":
+        a, b = random.randint(2, 12), random.randint(2, 12)
+        ans = a * b
+    elif op == "÷":
+        b = random.randint(2, 12)
+        ans = random.randint(2, 12)
+        a = b * ans  # 整数になるように調整
+    return f"{a} {op} {b}", ans
+
+# 初期化
+if "question" not in st.session_state:
+    st.session_state.question, st.session_state.answer = generate_problem()
+    st.session_state.answered = False
+    st.session_state.start_time = time.time()
+
+# 出題
+st.sub
+
 
 
 
