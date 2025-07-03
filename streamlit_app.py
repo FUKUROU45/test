@@ -1,43 +1,45 @@
 import streamlit as st
+import random
 
-st.title("🎓 高校1年生向け 情報クイズ")
+st.title("🧮 四則演算クイズ")
 
-questions = [
-    {
-        "question": "Q1. 次のうち、デジタルデータの特徴はどれ？",
-        "options": ["連続的である", "連続と離散が混在する", "離散的である", "常にアナログ信号である"],
-        "answer": "離散的である",
-        "explanation": "デジタルデータは、0と1のような離散的な値で表されるのが特徴です。"
-    },
-    {
-        "question": "Q2. コンピュータが使う2進数で「10」は何を表す？",
-        "options": ["1", "2", "3", "4"],
-        "answer": "2",
-        "explanation": "2進数の『10』は、10進数の『2』を表します。"
-    },
-    {
-        "question": "Q3. 強いパスワードの条件として適切なのは？",
-        "options": ["誕生日を使う", "8文字以下にする", "英数字と記号を組み合わせる", "同じ文字を繰り返す"],
-        "answer": "英数字と記号を組み合わせる",
-        "explanation": "強いパスワードには、大文字・小文字・数字・記号の組み合わせが推奨されます。"
-    }
-]
+# 問題を生成
+def generate_question():
+    a = random.randint(1, 20)
+    b = random.randint(1, 20)
+    op = random.choice(["+", "-", "*", "/"])
 
-score = 0
+    # わり算の時は割り切れるように調整
+    if op == "/":
+        a = a * b
+    question = f"{a} {op} {b}"
+    answer = eval(question)
+    return question, round(answer, 2)
 
-for q in questions:
-    st.subheader(q["question"])
-    user_answer = st.radio("選択肢を選んでください", q["options"], key=q["question"])
-    if st.button("答え合わせ", key="btn_" + q["question"]):
-        if user_answer == q["answer"]:
-            st.success("正解！ 🎉")
-            score += 1
+# セッションで保持
+if "question" not in st.session_state:
+    st.session_state.question, st.session_state.answer = generate_question()
+
+st.subheader("次の計算を解いてください：")
+st.latex(st.session_state.question)
+
+user_input = st.text_input("あなたの答え（小数は . を使って2桁まで）:")
+
+if st.button("答え合わせ"):
+    try:
+        user_answer = float(user_input)
+        correct = abs(user_answer - st.session_state.answer) < 0.01  # 誤差対策
+        if correct:
+            st.success("✅ 正解です！")
         else:
-            st.error("不正解 😢")
-        st.info(f"解説：{q['explanation']}")
+            st.error(f"❌ 不正解... 正解は {st.session_state.answer} です。")
+        # 次の問題へ
+        if st.button("次の問題へ"):
+            st.session_state.question, st.session_state.answer = generate_question()
+            st.experimental_rerun()
+    except:
+        st.warning("⚠️ 数字で答えてください。")
 
-st.markdown("---")
-st.subheader(f"あなたのスコア：{score} / {len(questions)}")
 
 
 
