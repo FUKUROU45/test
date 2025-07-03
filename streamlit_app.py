@@ -1,45 +1,69 @@
 import streamlit as st
 import random
 
-st.title("🔢 二進数 → 十進数 クイズ")
+st.title("🧮 二進数 ⇄ 十進数 クイズ")
 
-# 問題生成（4ビットまたは5ビット程度）
-def generate_question():
-    bits = random.randint(3, 5)  # ビット数をランダム化（例：3〜5ビット）
-    binary = ''.join(random.choice(['0', '1']) for _ in range(bits))
-    decimal = int(binary, 2)
-    return binary, decimal
+# 問題の生成
+def generate_problem():
+    mode = random.choice(["10to2", "2to10"])
+    if mode == "10to2":
+        decimal = random.randint(1, 31)
+        binary = bin(decimal)[2:]
+        return {
+            "mode": mode,
+            "question": decimal,
+            "answer": binary,
+            "display": f"{decimal}_{10}"
+        }
+    else:
+        bits = random.randint(3, 5)
+        binary = ''.join(random.choice(['0', '1']) for _ in range(bits))
+        decimal = int(binary, 2)
+        return {
+            "mode": mode,
+            "question": binary,
+            "answer": str(decimal),
+            "display": f"{binary}_{2}"
+        }
 
-# セッション状態の初期化
-if "binary" not in st.session_state:
-    st.session_state.binary, st.session_state.decimal = generate_question()
+# セッションの初期化
+if "problem" not in st.session_state:
+    st.session_state.problem = generate_problem()
     st.session_state.answered = False
 
-st.subheader("次の2進数を10進数に変換してください：")
-st.latex(f"{st.session_state.binary}_{2}")
+# 出題
+problem = st.session_state.problem
+mode = problem["mode"]
 
-user_answer = st.text_input("あなたの答え（10進数）:")
+st.subheader("次の変換を行ってください：")
+if mode == "10to2":
+    st.write("🔄 **10進数 → 2進数**")
+else:
+    st.write("🔄 **2進数 → 10進数**")
+
+st.latex(problem["display"])
+user_answer = st.text_input("あなたの答え（2進数または10進数で入力）:")
 
 # 答え合わせ
 if st.button("答え合わせ") and not st.session_state.answered:
     st.session_state.answered = True
-    try:
-        user_input = int(user_answer)
-        correct = st.session_state.decimal
-        if user_input == correct:
-            st.success("✅ 正解！")
-        else:
-            st.error(f"❌ 不正解... 正解は {correct} です。")
-        st.info(f"{st.session_state.binary} は 2進数で、{correct} として表せます。")
-    except:
-        st.warning("⚠️ 数字を半角で入力してください。")
+    correct = problem["answer"]
+    if user_answer == correct:
+        st.success("✅ 正解です！")
+    else:
+        st.error(f"❌ 不正解... 正解は {correct} です。")
+    if mode == "10to2":
+        st.info(f"{problem['question']} を 2進数にすると {correct} になります。")
+    else:
+        st.info(f"{problem['question']} を 10進数にすると {correct} になります。")
 
-# 次の問題
+# 次の問題へ
 if st.session_state.answered:
     if st.button("次の問題へ"):
-        st.session_state.binary, st.session_state.decimal = generate_question()
+        st.session_state.problem = generate_problem()
         st.session_state.answered = False
         st.experimental_rerun()
+
 
 
 
