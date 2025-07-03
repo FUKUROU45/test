@@ -1,44 +1,73 @@
 import streamlit as st
 import random
+import time
 
-st.title("🧮 四則演算クイズ")
+TIME_LIMIT = 10  # 秒数の設定（例：10秒）
 
-# 問題を生成
+st.title("⏱️ 時間制限付き！四則演算クイズ")
+
+# 問題の生成
 def generate_question():
     a = random.randint(1, 20)
     b = random.randint(1, 20)
     op = random.choice(["+", "-", "*", "/"])
-
-    # わり算の時は割り切れるように調整
     if op == "/":
         a = a * b
     question = f"{a} {op} {b}"
     answer = eval(question)
     return question, round(answer, 2)
 
-# セッションで保持
+# 初期化
 if "question" not in st.session_state:
     st.session_state.question, st.session_state.answer = generate_question()
+    st.session_state.start_time = time.time()
+    st.session_state.result = None
 
-st.subheader("次の計算を解いてください：")
+# 経過時間を確認
+elapsed_time = time.time() - st.session_state.start_time
+remaining_time = max(0, TIME_LIMIT - int(elapsed_time))
+
+st.subheader("問題：")
 st.latex(st.session_state.question)
+st.info(f"残り時間：{remaining_time} 秒")
 
-user_input = st.text_input("あなたの答え（小数は . を使って2桁まで）:")
+if remaining_time == 0 and st.session_state.result is None:
+    st.session_state.result = "timeout"
 
-if st.button("答え合わせ"):
-    try:
-        user_answer = float(user_input)
-        correct = abs(user_answer - st.session_state.answer) < 0.01  # 誤差対策
-        if correct:
-            st.success("✅ 正解です！")
+# 回答入力
+if st.session_state.result is None:
+    user_input = st.text_input("答えを入力してください（10秒以内）:")
+
+    if st.button("答え合わせ"):
+        elapsed_time = time.time() - st.session_state.start_time
+        if elapsed_time > TIME_LIMIT:
+            st.error("⌛ 時間切れ！")
+            st.session_state.result = "timeout"
         else:
-            st.error(f"❌ 不正解... 正解は {st.session_state.answer} です。")
-        # 次の問題へ
-        if st.button("次の問題へ"):
-            st.session_state.question, st.session_state.answer = generate_question()
-            st.experimental_rerun()
-    except:
-        st.warning("⚠️ 数字で答えてください。")
+            try:
+                user_answer = float(user_input)
+                correct = abs(user_answer - st.session_state.answer) < 0.01
+                if correct:
+                    st.success("✅ 正解！")
+                    st.session_state.result = "correct"
+                else:
+                    st.error(f"❌ 不正解... 正解は {st.session_state.answer} です。")
+                    st.session_state.result = "wrong"
+            except:
+                st.warning("⚠️ 数字で答えてください。")
+
+# タイムアウトメッセージ
+if st.session_state.result == "timeout":
+    st.error(f"⏰ 時間切れ！正解は {st.session_state.answer} でした。")
+
+# 次の問題へ
+if st.session_state.result:
+    if st.button("次の問題へ"):
+        st.session_state.question, st.session_state.answer = generate_question()
+        st.session_state.start_time = time.time()
+        st.session_state.result = None
+        st.experimental_rerun()
+
 
 
 
