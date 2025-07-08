@@ -1,37 +1,47 @@
 import streamlit as st
 import random
-import time
 
+# タイトル
 st.title("🧠 暗算トレーニング")
 
-# 設定（範囲・演算子）
-operators = ["＋", "－", "×", "÷"]
+# 問題の種類
+operation = st.selectbox("問題の種類を選んでください", ["足し算", "引き算", "かけ算"])
 
-def generate_problem():
-    op = random.choice(operators)
-    if op == "＋":
-        a, b = random.randint(10, 99), random.randint(10, 99)
-        ans = a + b
-    elif op == "－":
-        a, b = random.randint(50, 99), random.randint(10, 49)
-        ans = a - b
-    elif op == "×":
-        a, b = random.randint(2, 12), random.randint(2, 12)
-        ans = a * b
-    elif op == "÷":
-        b = random.randint(2, 12)
-        ans = random.randint(2, 12)
-        a = b * ans  # 整数になるように調整
-    return f"{a} {op} {b}", ans
+# 数字の範囲（設定可能）
+min_val = st.number_input("最小の数", value=1)
+max_val = st.number_input("最大の数", value=20)
 
-# 初期化
-if "question" not in st.session_state:
-    st.session_state.question, st.session_state.answer = generate_problem()
-    st.session_state.answered = False
-    st.session_state.start_time = time.time()
+# 問題を作成
+if st.button("問題を出す"):
+    num1 = random.randint(min_val, max_val)
+    num2 = random.randint(min_val, max_val)
+    
+    if operation == "足し算":
+        answer = num1 + num2
+        question = f"{num1} + {num2}"
+    elif operation == "引き算":
+        answer = num1 - num2
+        question = f"{num1} - {num2}"
+    elif operation == "かけ算":
+        answer = num1 * num2
+        question = f"{num1} × {num2}"
 
-# 出題
-st.sub
+    # セッションに保存
+    st.session_state["question"] = question
+    st.session_state["answer"] = answer
+    st.session_state["show_question"] = True
+    st.session_state["result"] = None
+
+# 問題を表示
+if "show_question" in st.session_state and st.session_state["show_question"]:
+    st.subheader(f"問題：{st.session_state['question']}")
+    user_answer = st.number_input("答えを入力", step=1, format="%d", key="user_answer")
+
+    if st.button("答え合わせ"):
+        if user_answer == st.session_state["answer"]:
+            st.success("正解！🎉")
+        else:
+            st.error(f"不正解 😢 正解は {st.session_state['answer']} でした。")
 
 
 
