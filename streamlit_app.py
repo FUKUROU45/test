@@ -1,55 +1,85 @@
 import streamlit as st
 import random
 import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+# ページ設定
+st.set_page_config(
+    page_title="平方完成練習アプリ",
+    page_icon="📐",
+    layout="wide"
+)
 
 # アプリのタイトル
-st.title("平方完成練習アプリ")
-st.write("二次関数の平方完成を練習しましょう！")
+st.title("📐 平方完成練習アプリ")
+st.markdown("**二次関数の平方完成をマスターしよう！**")
 
 # セッション状態の初期化
 if 'problem_generated' not in st.session_state:
     st.session_state.problem_generated = False
-if 'show_steps' not in st.session_state:
-    st.session_state.show_steps = False
-if 'current_step' not in st.session_state:
-    st.session_state.current_step = 0
+if 'show_solution' not in st.session_state:
+    st.session_state.show_solution = False
+if 'difficulty' not in st.session_state:
+    st.session_state.difficulty = "初級"
+if 'score' not in st.session_state:
+    st.session_state.score = 0
+if 'attempts' not in st.session_state:
+    st.session_state.attempts = 0
 
-def generate_problem():
-    """新しい問題を生成する"""
-    # 係数をランダムに選択（計算しやすい値に限定）
-    a = random.choice([1, 2, 3, -1, -2])
-    b = random.choice([-6, -4, -2, 2, 4, 6, 8])
-    c = random.choice([-5, -3, -1, 1, 3, 5, 7])
+def generate_problem(difficulty):
+    """難易度に応じて問題を生成"""
+    if difficulty == "初級":
+        a = random.choice([1, 2, -1, -2])
+        b = random.choice([-6, -4, -2, 2, 4, 6])
+        c = random.choice([-3, -1, 0, 1, 3, 5])
+    elif difficulty == "中級":
+        a = random.choice([1, 2, 3, -1, -2, -3])
+        b = random.choice([-8, -6, -4, -2, 2, 4, 6, 8])
+        c = random.choice([-5, -3, -1, 1, 3, 5, 7])
+    else:  # 上級
+        a = random.choice([1, 2, 3, 4, -1, -2, -3])
+        b = random.choice([-10, -8, -6, -4, -2, 2, 4, 6, 8, 10])
+        c = random.choice([-7, -5, -3, -1, 1, 3, 5, 7, 9])
     
     return a, b, c
 
 def solve_square_completion(a, b, c):
-    """平方完成の解答を計算する"""
-    # ax² + bx + c = a(x + p)² + q の形に変形
+    """平方完成の解を計算"""
+    # ax² + bx + c = a(x + p)² + q の形
     p = b / (2 * a)
     q = c - (b * b) / (4 * a)
-    
     return p, q
 
-def format_expression(a, b, c):
-    """二次式を見やすい形で表示する"""
-    expr = f"{a}x²"
+def format_quadratic(a, b, c):
+    """二次式を美しく表示"""
+    terms = []
     
+    # x²の項
+    if a == 1:
+        terms.append("x²")
+    elif a == -1:
+        terms.append("-x²")
+    else:
+        terms.append(f"{a}x²")
+    
+    # xの項
     if b > 0:
-        expr += f" + {b}x"
+        terms.append(f"+ {b}x" if len(terms) > 0 else f"{b}x")
     elif b < 0:
-        expr += f" - {abs(b)}x"
+        terms.append(f"- {abs(b)}x")
     
+    # 定数項
     if c > 0:
-        expr += f" + {c}"
+        terms.append(f"+ {c}" if len(terms) > 0 else f"{c}")
     elif c < 0:
-        expr += f" - {abs(c)}"
+        terms.append(f"- {abs(c)}")
     
-    return expr
+    return " ".join(terms)
 
-def format_answer(a, p, q):
-    """平方完成の答えを見やすい形で表示する"""
-    # a(x + p)² + q の形で表示
+def format_completed_square(a, p, q):
+    """平方完成の形を美しく表示"""
+    # a(x + p)² + q の形
     if a == 1:
         a_str = ""
     elif a == -1:
@@ -73,129 +103,154 @@ def format_answer(a, p, q):
     
     return f"{a_str}({p_str})²{q_str}"
 
-# 新しい問題を生成するボタン
-if st.button("新しい問題を生成"):
-    st.session_state.a, st.session_state.b, st.session_state.c = generate_problem()
-    st.session_state.problem_generated = True
-    st.session_state.show_steps = False
-    st.session_state.current_step = 0
-    st.rerun()
+def plot_quadratic(a, b, c, p, q):
+    """二次関数のグラフを描画"""
+    x = np.linspace(-10, 10, 1000)
+    y = a * x**2 + b * x + c
+    
+    fig, ax = plt.subplots(figsize=(10, 6))
+    ax.plot(x, y, 'b-', linewidth=2, label=f'y = {format_quadratic(a, b, c)}')
+    ax.grid(True, alpha=0.3)
+    ax.axhline(y=0, color='k', linewidth=0.5)
+    ax.axvline(x=0, color='k', linewidth=0.5)
+    
+    # 頂点をマーク
+    vertex_x = -p
+    vertex_y = q
+    ax.plot(vertex_x, vertex_y, 'ro', markersize=8, label=f'頂点 ({vertex_x:.1f}, {vertex_y:.1f})')
+    
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_title(f'二次関数のグラフ')
+    ax.legend()
+    ax.set_xlim(-8, 8)
+    ax.set_ylim(-10, 10)
+    
+    return fig
 
-# 問題が生成されている場合の表示
-if st.session_state.problem_generated:
-    a, b, c = st.session_state.a, st.session_state.b, st.session_state.c
+# サイドバーの設定
+st.sidebar.header("⚙️ 設定")
+difficulty = st.sidebar.selectbox("難易度を選択", ["初級", "中級", "上級"])
+st.session_state.difficulty = difficulty
+
+st.sidebar.header("📊 成績")
+if st.session_state.attempts > 0:
+    accuracy = (st.session_state.score / st.session_state.attempts) * 100
+    st.sidebar.metric("正答率", f"{accuracy:.1f}%")
+    st.sidebar.metric("正解数", st.session_state.score)
+    st.sidebar.metric("挑戦回数", st.session_state.attempts)
+
+st.sidebar.header("📚 平方完成の公式")
+st.sidebar.latex(r"ax^2 + bx + c = a\left(x + \frac{b}{2a}\right)^2 + c - \frac{b^2}{4a}")
+
+st.sidebar.header("💡 解き方のコツ")
+st.sidebar.markdown("""
+1. **x²の係数でくくる**
+2. **xの係数の半分を計算**
+3. **完全平方式を作る**
+4. **定数項を調整**
+5. **答えを確認**
+""")
+
+# メインコンテンツ
+col1, col2 = st.columns([2, 1])
+
+with col1:
+    st.header("🎯 問題")
     
-    st.subheader("問題")
-    st.write(f"次の二次式を平方完成してください：")
-    st.latex(f"y = {format_expression(a, b, c)}")
-    
-    # 解答の計算
-    p, q = solve_square_completion(a, b, c)
-    
-    # ヒント表示ボタン
-    if st.button("解き方を段階的に見る"):
-        st.session_state.show_steps = True
-        st.session_state.current_step = 1
+    # 問題生成ボタン
+    if st.button("🎲 新しい問題を生成", type="primary"):
+        st.session_state.a, st.session_state.b, st.session_state.c = generate_problem(difficulty)
+        st.session_state.problem_generated = True
+        st.session_state.show_solution = False
         st.rerun()
     
-    # 解答表示ボタン
-    if st.button("答えを見る"):
-        st.session_state.show_steps = True
-        st.session_state.current_step = 5
-        st.rerun()
+    # 問題表示
+    if st.session_state.problem_generated:
+        a, b, c = st.session_state.a, st.session_state.b, st.session_state.c
+        
+        st.subheader("次の二次式を平方完成してください：")
+        st.latex(f"y = {format_quadratic(a, b, c)}")
+        
+        # 解答の計算
+        p, q = solve_square_completion(a, b, c)
+        
+        # 答え入力フォーム
+        st.subheader("📝 あなたの答え")
+        col_a, col_b = st.columns(2)
+        
+        with col_a:
+            if a == 1:
+                user_p = st.number_input("pの値 (x + p)²", value=0.0, step=0.5, key="user_p")
+            else:
+                user_p = st.number_input(f"pの値 {a}(x + p)²", value=0.0, step=0.5, key="user_p")
+        
+        with col_b:
+            user_q = st.number_input("qの値 (定数項)", value=0.0, step=0.5, key="user_q")
+        
+        # 答えをチェック
+        if st.button("✅ 答えをチェック"):
+            st.session_state.attempts += 1
+            if abs(user_p - p) < 0.01 and abs(user_q - q) < 0.01:
+                st.success("🎉 正解です！素晴らしい！")
+                st.session_state.score += 1
+                st.balloons()
+            else:
+                st.error("❌ 残念！もう一度チャレンジしてみてください。")
+        
+        # 解答表示
+        if st.button("💡 解答を見る"):
+            st.session_state.show_solution = True
+            st.rerun()
+        
+        if st.session_state.show_solution:
+            st.subheader("📋 詳細な解答")
+            
+            with st.expander("ステップ1: 係数の確認", expanded=True):
+                st.write(f"a = {a}, b = {b}, c = {c}")
+            
+            with st.expander("ステップ2: 公式の適用", expanded=True):
+                st.write(f"p = b/(2a) = {b}/(2×{a}) = {p}")
+                st.write(f"q = c - b²/(4a) = {c} - {b}²/(4×{a}) = {q}")
+            
+            with st.expander("ステップ3: 最終答え", expanded=True):
+                answer = format_completed_square(a, p, q)
+                st.latex(f"y = {answer}")
+                st.success(f"答え: y = {answer}")
+            
+            with st.expander("ステップ4: 検証", expanded=True):
+                # 展開して元の式と比較
+                expanded_a = a
+                expanded_b = 2 * a * p
+                expanded_c = a * (p * p) + q
+                
+                st.write("展開による検証:")
+                st.write(f"展開: {format_quadratic(expanded_a, expanded_b, expanded_c)}")
+                st.write(f"元の式: {format_quadratic(a, b, c)}")
+                
+                if abs(expanded_b - b) < 0.0001 and abs(expanded_c - c) < 0.0001:
+                    st.success("✅ 検証完了！正しく平方完成されています。")
+
+with col2:
+    st.header("📈 グラフ")
     
-    # 段階的な解答表示
-    if st.session_state.show_steps:
-        st.subheader("解答手順")
+    if st.session_state.problem_generated:
+        a, b, c = st.session_state.a, st.session_state.b, st.session_state.c
+        p, q = solve_square_completion(a, b, c)
         
-        if st.session_state.current_step >= 1:
-            st.write("**ステップ1: 係数を確認**")
-            st.write(f"a = {a}, b = {b}, c = {c}")
-            
-            if st.session_state.current_step == 1:
-                if st.button("次のステップ"):
-                    st.session_state.current_step = 2
-                    st.rerun()
+        fig = plot_quadratic(a, b, c, p, q)
+        st.pyplot(fig)
         
-        if st.session_state.current_step >= 2:
-            st.write("**ステップ2: x²の係数でくくり出す**")
-            if a == 1:
-                st.latex(f"y = x^2 + {b}x + {c}")
-            else:
-                inner_b = b // a if b % a == 0 else f"\\frac{{{b}}}{{{a}}}"
-                inner_c = c
-                st.latex(f"y = {a}(x^2 + {inner_b}x) + {inner_c}")
-            
-            if st.session_state.current_step == 2:
-                if st.button("次のステップ", key="step2"):
-                    st.session_state.current_step = 3
-                    st.rerun()
+        st.subheader("🎯 頂点の情報")
+        vertex_x = -p
+        vertex_y = q
+        st.write(f"頂点: ({vertex_x:.1f}, {vertex_y:.1f})")
         
-        if st.session_state.current_step >= 3:
-            st.write("**ステップ3: 平方完成の公式を適用**")
-            st.write("x² + px の形を (x + p/2)² - (p/2)² に変形")
-            p_half = b / (2 * a)
-            p_half_squared = (b * b) / (4 * a * a)
-            
-            if a == 1:
-                st.latex(f"y = (x + {p_half})^2 - {p_half_squared} + {c}")
-            else:
-                st.latex(f"y = {a}[(x + {p_half})^2 - {p_half_squared}] + {c}")
-            
-            if st.session_state.current_step == 3:
-                if st.button("次のステップ", key="step3"):
-                    st.session_state.current_step = 4
-                    st.rerun()
-        
-        if st.session_state.current_step >= 4:
-            st.write("**ステップ4: 定数項を整理**")
-            if a == 1:
-                final_q = c - (b * b) / (4 * a)
-                st.latex(f"y = (x + {p})^2 + {final_q}")
-            else:
-                final_q = c - (b * b) / (4 * a)
-                st.latex(f"y = {a}(x + {p})^2 + {final_q}")
-            
-            if st.session_state.current_step == 4:
-                if st.button("最終答え", key="step4"):
-                    st.session_state.current_step = 5
-                    st.rerun()
-        
-        if st.session_state.current_step >= 5:
-            st.write("**最終答え**")
-            final_answer = format_answer(a, p, q)
-            st.latex(f"y = {final_answer}")
-            
-            # 検証
-            st.write("**検証**")
-            st.write("元の式と展開した式が同じか確認してみましょう：")
-            
-            # 展開計算
-            expanded_a = a
-            expanded_b = 2 * a * p
-            expanded_c = a * (p * p) + q
-            
-            st.write(f"展開: {a}(x + {p})² + {q}")
-            st.write(f"= {expanded_a}x² + {expanded_b}x + {expanded_c}")
-            st.write(f"元の式: {format_expression(a, b, c)}")
-            
-            if abs(expanded_b - b) < 0.0001 and abs(expanded_c - c) < 0.0001:
-                st.success("✅ 正解です！")
-            else:
-                st.error("❌ 計算を確認してください")
+        if a > 0:
+            st.write("📈 上に凸（最小値を持つ）")
+        else:
+            st.write("📉 下に凸（最大値を持つ）")
 
-# 使い方の説明
-st.sidebar.header("使い方")
-st.sidebar.write("1. 「新しい問題を生成」ボタンを押して問題を作成")
-st.sidebar.write("2. 自分で解いてみる")
-st.sidebar.write("3. 「解き方を段階的に見る」で手順を確認")
-st.sidebar.write("4. 「答えを見る」で最終答えを確認")
-
-st.sidebar.header("平方完成の公式")
-st.sidebar.latex(r"ax^2 + bx + c = a(x + \frac{b}{2a})^2 + c - \frac{b^2}{4a}")
-
-st.sidebar.header("ポイント")
-st.sidebar.write("• x²の係数でくくり出す")
-st.sidebar.write("• (x + p/2)² - (p/2)² の形を作る")
-st.sidebar.write("• 定数項を正しく計算する")
-st.sidebar.write("• 最後に検証する")
+# フッター
+st.markdown("---")
+st.markdown("**💪 頑張って練習しましょう！平方完成は二次関数の重要な技術です。**")
