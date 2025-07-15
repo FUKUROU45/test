@@ -686,4 +686,4 @@ with st.sidebar:
     st.write("**平方根**: 平方根の計算")
     
     st.subheader("💡 上達のコツ")
-    st.
+    st.write('oyatsugohan')
