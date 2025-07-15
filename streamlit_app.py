@@ -504,7 +504,7 @@ problem_types = st.multiselect(
     }[x]
 )
 
-        if problem_types:
+    if problem_types:
             st.session_state.problem_types = problem_types
         
         st.subheader("制限時間")
