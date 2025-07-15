@@ -486,20 +486,24 @@ if st.session_state.game_state == 'menu':
         )
         st.session_state.difficulty = difficulty
         
-        st.subheader("問題タイプ")
-        problem_types = st.multiselect(
-            "問題タイプを選択してください:",
-            ['basic_calculation', 'vertex', 'discriminant', 'axis_of_symmetry', 'roots', 'y_intercept'],
-            default=st.session_state.problem_types,
-            format_func=lambda x: {
-                'basic_calculation': '関数値の計算',
-                'vertex': '頂点',
-                'discriminant': '判別式',
-                'axis_of_symmetry': '対称軸',
-                'roots': '解・因数分解',
-                'y_intercept': '切片'
-            }[x]
-        )
+        valid_options = ['basic_calculation', 'vertex', 'discriminant', 'axis_of_symmetry', 'roots', 'y_intercept']
+
+default_types = [pt for pt in st.session_state.problem_types if pt in valid_options]
+
+problem_types = st.multiselect(
+    "問題タイプを選択してください:",
+    valid_options,
+    default=default_types,
+    format_func=lambda x: {
+        'basic_calculation': '関数値の計算',
+        'vertex': '頂点',
+        'discriminant': '判別式',
+        'axis_of_symmetry': '対称軸',
+        'roots': '解・因数分解',
+        'y_intercept': '切片'
+    }[x]
+)
+
         if problem_types:
             st.session_state.problem_types = problem_types
         
@@ -643,4 +647,4 @@ elif st.session_state.game_state == 'multiplayer_playing':
     for i, player in enumerate(st.session_state.players):
         with score_cols[i]:
             score = st.session_state.player_scores[player]
-            questions = st.session_state.player_questions[player]
+            questions = st.session_state.player_questions[player」]
