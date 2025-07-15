@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 import json
 
 # ページ設定
-st.set_page_config(page_title="高速暗算", page_icon="🧮", layout="wide")
+st.set_page_config(page_title="暗算トレーニング", page_icon="🧮", layout="wide")
 
 # セッション状態の初期化
 if 'game_state' not in st.session_state:
