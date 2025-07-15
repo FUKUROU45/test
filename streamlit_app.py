@@ -643,4 +643,4 @@ elif st.session_state.game_state == 'multiplayer_playing':
     for i, player in enumerate(st.session_state.players):
         with score_cols[i]:
             score = st.session_state.player_scores[player]
-            questions = st.session_state.player_questions[player
+            questions = st.session_state.player_questions[player]
