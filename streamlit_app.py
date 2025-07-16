@@ -1,49 +1,102 @@
 import streamlit as st
 import random
+import time
+import math
+import streamlit.components.v1 as components
 
-def generate_problem():
-    # b と c は偶数にすることで平方完成の結果pが整数になるよう調整
-    b = random.choice([i for i in range(-20, 21) if i % 2 == 0 and i != 0])
-    c = random.randint(-50, 50)
+# === 音の再生 ===
+def play_sound(correct=True):
+    sound_url = "https://www.soundjay.com/buttons/sounds/button-3.mp3" if correct else "https://www.soundjay.com/buttons/sounds/button-10.mp3"
+    components.html(f"""
+        <audio autoplay>
+            <source src="{sound_url}" type="audio/mpeg">
+        </audio>
+    """, height=0)
 
-    # 平方完成のpとqを整数で求める
-    p = -b // 2
-    q = c - (b**2) // 4
+# === セッション初期化 ===
+if "score" not in st.session_state:
+    st.session_state.score = 0
+    st.session_state.total = 0
+    st.session_state.start_time = None
+    st.session_state.problem = ""
+    st.session_state.answer = None
+    st.session_state.time_limit = 30
+    st.session_state.difficulty = "ふつう"
 
-    question = f"次の二次関数を平方完成しなさい:\n\n y = x^2 + {b}x + {c} \n\n整数で答えてください。\n(p, q)の順で入力してください。"
-    return question, (p, q)
+# === 難易度設定 ===
+st.sidebar.title("⚙️ 設定")
+difficulty = st.sidebar.selectbox("難易度", ["かんたん", "ふつう", "むずかしい"])
+st.session_state.difficulty = difficulty
 
-def main():
-    st.title("平方完成トレーニング（整数のみ）")
+# === 問題生成 ===
+def generate_problem(difficulty):
+    op_list = ["+", "-", "*", "/", "√"]
 
-    if "question" not in st.session_state or st.button("新しい問題を生成"):
-        q, ans = generate_problem()
-        st.session_state.question = q
-        st.session_state.answer = ans
-        st.session_state.answered = False
+    op = random.choice(op_list)
 
-    st.write("### 問題")
-    st.write(st.session_state.question)
+    if difficulty == "かんたん":
+        a = random.randint(1, 9)
+        b = random.randint(1, 9)
+    elif difficulty == "ふつう":
+        a = random.randint(10, 99)
+        b = random.randint(2, 20)
+    else:
+        a = random.randint(50, 200)
+        b = random.randint(5, 30)
 
-    with st.form("answer_form"):
-        p_input = st.text_input("pの値", key="p_input")
-        q_input = st.text_input("qの値", key="q_input")
-        submitted = st.form_submit_button("答え合わせ")
+    if op == "√":
+        n = random.choice([x**2 for x in range(2, 21)])  # 整数平方根だけ出す
+        return f"√{n}", int(math.sqrt(n))
 
-        if submitted:
+    if op == "/":
+        result = a // b
+        a = result * b  # 整数割り算に調整
+        return f"{a} / {b}", result
+
+    problem = f"{a} {op} {b}"
+    answer = eval(problem)
+    return problem, int(answer)
+
+# === ゲーム開始 ===
+if st.button("スタート！"):
+    st.session_state.start_time = time.time()
+    st.session_state.score = 0
+    st.session_state.total = 0
+    st.session_state.problem, st.session_state.answer = generate_problem(st.session_state.difficulty)
+
+# === ゲーム中 ===
+if st.session_state.start_time:
+    elapsed = time.time() - st.session_state.start_time
+    remaining = st.session_state.time_limit - elapsed
+
+    if remaining > 0:
+        st.write(f"🕒 残り時間: {int(remaining)} 秒")
+        st.write(f"🧮 問題: {st.session_state.problem}")
+        answer = st.text_input("答えを入力", key=st.session_state.total)
+
+        if answer:
             try:
-                p_user = int(p_input)
-                q_user = int(q_input)
-                p_correct, q_correct = st.session_state.answer
-
-                if p_user == p_correct and q_user == q_correct:
-                    st.success("正解です！")
+                if int(answer) == st.session_state.answer:
+                    st.success("✅ 正解！")
+                    play_sound(correct=True)
+                    st.session_state.score += 1
                 else:
-                    st.error(f"不正解です。正しい答えは p = {p_correct}, q = {q_correct} です。")
+                    st.error(f"❌ 不正解… 答えは {st.session_state.answer}")
+                    play_sound(correct=False)
             except:
-                st.error("整数で入力してください。")
+                st.warning("⚠️ 数値を入力してください")
+                play_sound(correct=False)
 
-if __name__ == "__main__":
-    main()
+            st.session_state.total += 1
+            st.session_state.problem, st.session_state.answer = generate_problem(st.session_state.difficulty)
+            st.experimental_rerun()
 
-
+    else:
+        st.write("🛑 タイムアップ！")
+        st.write(f"✅ 正解数: {st.session_state.score}")
+        st.write(f"🔢 問題数: {st.session_state.total}")
+        if st.session_state.total > 0:
+            rate = st.session_state.score / st.session_state.total * 100
+            st.write(f"🎯 正答率: {rate:.1f}%")
+        else:
+            st.write("😅 1問も答えられませんでした")
