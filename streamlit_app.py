@@ -20,13 +20,17 @@ if "score" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.problem = ""
     st.session_state.answer = None
-    st.session_state.time_limit = 30
     st.session_state.difficulty = "ふつう"
+    st.session_state.time_limit = 30
 
-# === 難易度設定 ===
+# === サイドバー設定 ===
 st.sidebar.title("⚙️ 設定")
 difficulty = st.sidebar.selectbox("難易度", ["かんたん", "ふつう", "むずかしい"])
+time_limit_option = st.sidebar.selectbox("制限時間（秒）", [30, 60, 90, 120])
+
+# ユーザーの設定をセッションに保存
 st.session_state.difficulty = difficulty
+st.session_state.time_limit = time_limit_option
 
 # === 問題生成 ===
 def generate_problem(difficulty):
@@ -45,12 +49,12 @@ def generate_problem(difficulty):
         b = random.randint(5, 30)
 
     if op == "√":
-        n = random.choice([x**2 for x in range(2, 21)])  # 整数平方根だけ出す
+        n = random.choice([x**2 for x in range(2, 21)])  # 整数平方根
         return f"√{n}", int(math.sqrt(n))
 
     if op == "/":
         result = a // b
-        a = result * b  # 整数割り算に調整
+        a = result * b
         return f"{a} / {b}", result
 
     problem = f"{a} {op} {b}"
@@ -78,14 +82,14 @@ if st.session_state.start_time:
             try:
                 if int(answer) == st.session_state.answer:
                     st.success("✅ 正解！")
-                    play_sound(correct=True)
+                    play_sound(True)
                     st.session_state.score += 1
                 else:
                     st.error(f"❌ 不正解… 答えは {st.session_state.answer}")
-                    play_sound(correct=False)
+                    play_sound(False)
             except:
                 st.warning("⚠️ 数値を入力してください")
-                play_sound(correct=False)
+                play_sound(False)
 
             st.session_state.total += 1
             st.session_state.problem, st.session_state.answer = generate_problem(st.session_state.difficulty)
@@ -100,3 +104,4 @@ if st.session_state.start_time:
             st.write(f"🎯 正答率: {rate:.1f}%")
         else:
             st.write("😅 1問も答えられませんでした")
+
