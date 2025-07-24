@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.title("平方完成の練習アプリ（難易度選択＆解答表示＆次の問題）")
+st.title("平方完成の練習アプリ")
 
 # 難易度選択
 level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
