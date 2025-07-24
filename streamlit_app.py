@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.title("平方完成の練習アプリ（sympyなし）")
+st.title("平方完成の練習アプリ")
 
 # ランダムに2次式の係数を生成 (a != 0)
 a = random.choice([1, -1, 2, -2])
