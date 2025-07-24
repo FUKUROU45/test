@@ -2,7 +2,6 @@ import streamlit as st
 import numpy as np
 import random
 from fractions import Fraction
-import plotly.graph_objects as go
 
 def generate_quadratic_problem(difficulty="basic"):
     """難易度に応じて二次関数の問題を生成"""
@@ -121,45 +120,15 @@ def format_completed_square(a, p, q):
     return result
 
 def plot_quadratic(a, b, c):
-    """二次関数のグラフを描画"""
-    x = np.linspace(-10, 10, 400)
+    """二次関数のグラフをStreamlitのline_chartで描画"""
+    x = np.linspace(-10, 10, 200)
     y = float(a) * x**2 + float(b) * x + float(c)
     
     # 頂点の座標
     vertex_x = -float(b) / (2 * float(a))
     vertex_y = float(a) * vertex_x**2 + float(b) * vertex_x + float(c)
     
-    fig = go.Figure()
-    
-    # 二次関数のグラフ
-    fig.add_trace(go.Scatter(
-        x=x, y=y,
-        mode='lines',
-        name=f'y = {format_fraction(a)}x² + {format_fraction(b)}x + {format_fraction(c)}',
-        line=dict(color='blue', width=3)
-    ))
-    
-    # 頂点をマーク
-    fig.add_trace(go.Scatter(
-        x=[vertex_x], y=[vertex_y],
-        mode='markers',
-        name=f'頂点 ({format_fraction(vertex_x)}, {format_fraction(vertex_y)})',
-        marker=dict(color='red', size=10, symbol='circle')
-    ))
-    
-    fig.update_layout(
-        title="二次関数のグラフ",
-        xaxis_title="x",
-        yaxis_title="y",
-        grid=True,
-        showlegend=True,
-        height=400
-    )
-    
-    fig.update_xaxes(zeroline=True, zerolinewidth=2, zerolinecolor='gray')
-    fig.update_yaxes(zeroline=True, zerolinewidth=2, zerolinecolor='gray')
-    
-    return fig
+    return x, y, vertex_x, vertex_y
 
 def check_answer(user_a, user_p, user_q, correct_a, correct_p, correct_q):
     """解答をチェック"""
@@ -292,17 +261,42 @@ def main():
         with col2:
             # グラフ表示
             st.markdown("### 📈 グラフ")
-            fig = plot_quadratic(a, b, c)
-            st.plotly_chart(fig, use_container_width=True)
+            x_vals, y_vals, vertex_x, vertex_y = plot_quadratic(a, b, c)
+            
+            # DataFrameでグラフを作成
+            import pandas as pd
+            chart_data = pd.DataFrame({
+                'x': x_vals,
+                'y': y_vals
+            })
+            st.line_chart(chart_data.set_index('x'))
             
             # 頂点の情報
-            vertex_x = -float(b) / (2 * float(a))
-            vertex_y = float(a) * vertex_x**2 + float(b) * vertex_x + float(c)
-            
             st.markdown("### 📊 頂点の情報")
             st.write(f"**x座標**: {format_fraction(vertex_x)}")
             st.write(f"**y座標**: {format_fraction(vertex_y)}")
             st.write(f"**頂点**: ({format_fraction(vertex_x)}, {format_fraction(vertex_y)})")
+            
+            # 二次関数の式
+            st.markdown("### 📐 関数の情報")
+            st.write(f"**元の式**: {format_quadratic(a, b, c)}")
+            if st.session_state.show_solution:
+                st.write(f"**平方完成**: {format_completed_square(correct_a, correct_p, correct_q)}")
+            
+            # 判別式と性質
+            discriminant = float(b)**2 - 4*float(a)*float(c)
+            st.write(f"**判別式 D**: {discriminant:.2f}")
+            if discriminant > 0:
+                st.write("**実根**: 2個")
+            elif discriminant == 0:
+                st.write("**実根**: 1個（重根）")
+            else:
+                st.write("**実根**: なし（虚根）")
+                
+            if float(a) > 0:
+                st.write("**開く向き**: 上向き（最小値あり）")
+            else:
+                st.write("**開く向き**: 下向き（最大値あり）")
         
         # スコア表示
         if st.session_state.total_problems > 0:
