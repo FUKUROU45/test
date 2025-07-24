@@ -2,13 +2,13 @@ import streamlit as st
 import random
 import time
 
-st.title("🎯 平方完成")
+st.title("🎯 平方完成 タイムアタックモード（連続問題 & スコア付き）")
 
 # --------------------
 # 設定
 # --------------------
-LEVEL_TIMES = {"初級": 30, "中級": 45, "上級": 60}
-TOTAL_QUESTIONS = 5
+LEVEL_TIMES = {"初級": 30, "中級": 45, "上級": 60}  # 各難易度の制限時間
+TOTAL_QUESTIONS = 5  # 問題数
 
 # --------------------
 # セッション初期化
@@ -21,7 +21,7 @@ if "question_num" not in st.session_state:
     st.session_state.problem = None
     st.session_state.start_time = None
     st.session_state.show_result = False
-    st.session_state.level = "初級"
+    st.session_state.level = "初級"  # 初期設定
 
 # --------------------
 # 問題生成関数
@@ -139,15 +139,19 @@ if st.session_state.question_num > TOTAL_QUESTIONS:
     st.session_state.finished = True
 
 if st.session_state.finished:
-    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2)
+    # 正答率計算
+    accuracy = round((st.session_state.correct_count / TOTAL_QUESTIONS) * 100, 2)
+    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2) if TOTAL_QUESTIONS > 0 else 0
     st.markdown("---")
     st.markdown("## 📊 結果発表")
     st.markdown(f"""
 - 正解数：**{st.session_state.correct_count} / {TOTAL_QUESTIONS}**
+- 正答率：**{accuracy}%**
 - 平均解答時間：**{avg_time} 秒**
 """)
     if st.button("🔁 最初からやり直す"):
         st.session_state.clear()
+
 
 
 
