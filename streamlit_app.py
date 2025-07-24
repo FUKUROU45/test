@@ -24,7 +24,7 @@ if "question_num" not in st.session_state:
     st.session_state.level = "初級"
 
 # --------------------
-# 関数
+# 問題生成関数
 # --------------------
 def generate_problem(level):
     if level == "初級":
@@ -41,6 +41,9 @@ def generate_problem(level):
         c = random.randint(-20, 20)
     return a, b, c
 
+# --------------------
+# 解答判定関数
+# --------------------
 def is_correct(a, b, c, user_str):
     try:
         half = b / (2 * a)
@@ -48,6 +51,7 @@ def is_correct(a, b, c, user_str):
         const = -delta / (4 * a)
         expected1 = f"(x + {round(half, 2)})"
         expected2 = f"(x - {round(-half, 2)})"
+        # 文字列に模範形が含まれているかを簡易判定
         return (expected1 in user_str or expected2 in user_str) and str(round(const, 2)) in user_str
     except:
         return False
@@ -58,7 +62,9 @@ def is_correct(a, b, c, user_str):
 if st.session_state.question_num == 1:
     st.session_state.level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
 
+# --------------------
 # 問題生成（初期 or 次の問題）
+# --------------------
 if st.session_state.problem is None:
     st.session_state.problem = generate_problem(st.session_state.level)
     st.session_state.start_time = time.time()
@@ -69,11 +75,13 @@ elapsed = time.time() - st.session_state.start_time
 remaining = int(time_limit - elapsed)
 
 # --------------------
-# タイマー表示 & 入力
+# タイマー表示 & 問題表示
 # --------------------
 st.markdown(f"🕒 残り時間：**{max(0, remaining)} 秒**")
 st.latex(f"{a}x^2 + {b}x + {c}")
-user_input = st.text_input("平方完成した式を入力（例：1*(x + 2)**2 - 3）", key=st.session_state.question_num)
+
+# 入力フォーム
+user_input = st.text_input("平方完成した式を入力してください（例：1*(x + 2)**2 - 3）", key=st.session_state.question_num)
 
 # --------------------
 # 判定処理
@@ -91,7 +99,7 @@ if user_input:
     else:
         st.error(f"不正解… ⏱ {time_taken}秒")
 
-    # 模範解答と解説
+    # 模範解答と解説を表示
     half = b / (2 * a)
     delta = b**2 - 4*a*c
     const = -delta / (4 * a)
@@ -101,24 +109,36 @@ if user_input:
 
     st.markdown("### 解説")
     st.markdown(f"""
-- \( a = {a} \), \( b = {b} \), \( c = {c} \)  
-- \( \\frac{{b}}{{2a}} = {round(half, 2)} \)  
-- 判別式 \( \\Delta = b^2 - 4ac = {delta} \)  
-- 補正項 \( -\\frac{{\\Delta}}{{4a}} = {round(const, 2)} \)  
-- よって平方完成形：\({a}(x + {round(half, 2)})^2 + {round(const, 2)}\)
+- 係数は \( a = {a} \), \( b = {b} \), \( c = {c} \) です。  
+- \( \\frac{{b}}{{2a}} = {round(half, 2)} \) を計算します。  
+- 判別式は \( \\Delta = b^2 - 4ac = {delta} \) です。  
+- 補正項は \( -\\frac{{\\Delta}}{{4a}} = {round(const, 2)} \) となります。  
+- よって平方完成の形は：\({a}(x + {round(half, 2)})^2 + {round(const, 2)}\) です。
     """)
 
 # --------------------
-# 次の問題 or 終了処理
+# 次の問題・スキップボタン処理
 # --------------------
 if answered or remaining <= 0:
     if st.session_state.question_num >= TOTAL_QUESTIONS:
         st.session_state.finished = True
     else:
-        if st.button("次の問題へ"):
-            st.session_state.question_num += 1
-            st.session_state.problem = None
-            st.experimental_rerun()
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("次の問題へ"):
+                st.session_state.question_num += 1
+                st.session_state.problem = None
+                st.session_state.user_input = ""
+                st.session_state.start_time = time.time()
+                st.experimental_rerun()
+        with col2:
+            if st.button("問題をスキップ"):
+                # スキップは正解カウントも時間も加算しない
+                st.session_state.question_num += 1
+                st.session_state.problem = None
+                st.session_state.user_input = ""
+                st.session_state.start_time = time.time()
+                st.experimental_rerun()
 
 # --------------------
 # 結果表示
@@ -135,4 +155,5 @@ if st.session_state.finished:
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.experimental_rerun()
+
 
