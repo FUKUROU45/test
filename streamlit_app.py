@@ -1,4 +1,110 @@
-import streamlit as st
+if st.session_state.show_solution:
+                st.markdown("### 💡 正解")
+                st.info(format_completed_square(correct_a, correct_p, correct_q))
+                
+                # 入力値との比較（間違えた場合）
+                if check_btn and user_a and user_p and user_q:
+                    try:
+                        # 入力値を数値に変換して表示
+                        if '/' in str(user_a):
+                            input_a = Fraction(user_a)
+                        else:
+                            input_a = float(user_a)
+                            
+                        if '/' in str(user_p):
+                            input_p = Fraction(user_p)
+                        else:
+                            input_p = float(user_p)
+                            
+                        if '/' in str(user_q):
+                            input_q = Fraction(user_q)
+                        else:
+                            input_q = float(user_q)
+                        
+                        st.markdown("### 🔍 あなたの解答との比較")
+                        col_compare1, col_compare2 = st.columns(2)
+                        
+                        with col_compare1:
+                            st.write("**あなたの解答:**")
+                            user_format = format_completed_square(input_a, input_p, input_q)
+                            st.write(user_format)
+                        
+                        with col_compare2:
+                            st.write("**正解:**")
+                            correct_format = format_completed_square(correct_a, correct_p, correct_q)
+                            st.write(correct_format)
+                        
+                        # 各項目の正誤チェック
+                        st.markdown("### ✅ 項目別チェック")
+                        
+                        def is_close(a, b):
+                            return abs(float(a) - float(b)) < 1e-10
+                        
+                        a_correct = is_close(input_a, correct_a)
+                        p_correct = is_close(input_p, correct_p)
+                        q_correct = is_close(input_q, correct_q)
+                        
+                        st.write(f"**a の値**: {format_fraction(input_a)} {'✅' if a_correct else '❌'} (正解: {format_fraction(correct_a)})")
+                        st.write(f"**p の値**: {format_fraction(input_p)} {'✅' if p_correct else '❌'} (正解: {format_fraction(correct_p)})")
+                        st.write(f"**q の値**: {format_fraction(input_q)} {'✅' if q_correct else '❌'} (正解: {format_fraction(correct_q)})")
+                        
+                    except:
+                        st.warning("入力値の形式を確認してください。")
+                
+                # 解法の説明
+                with st.expander("📖 詳しい解法の手順", expanded=True):
+                    st.write("**平方完成の手順:**")
+                    st.write(f"**元の式:** {format_quadratic(a, b, c)}")
+                    
+                    # Step 1: aで括り出す（a≠1の場合）
+                    if a != 1:
+                        st.write(f"**Step 1:** aで括り出す")
+                        inside_b = Fraction(b) / Fraction(a)
+                        inside_c = Fraction(c) / Fraction(a)
+                        st.write(f"   = {format_fraction(a)}(x² + {format_fraction(inside_b)}x) + {format_fraction(c)}")
+                        st.write(f"   = {format_fraction(a)}(x² + {format_fraction(inside_b)}x + {format_fraction(inside_c - inside_c)}) + {format_fraction(c)}")
+                    else:
+                        st.write(f"**Step 1:** a = 1なので、そのまま進みます")
+                        inside_b = Fraction(b)
+                    
+                    # Step 2: 平方を作るための値を計算
+                    p_val = Fraction(b) / (2 * Fraction(a))
+                    st.write(f"**Step 2:** 平方を作るための値を計算")
+                    st.write(f"   p = b/(2a) = {format_fraction(b)}/(2×{format_fraction(a)}) = {format_fraction(p_val)}")
+                    
+                    # Step 3: 完全平方式を作る
+                    st.write(f"**Step 3:** 完全平方式を作る")
+                    square_term = p_val ** 2
+                    st.write(f"   (x + {format_fraction(p_val)})² = x² + {format_fraction(2*p_val)}x + {format_fraction(square_term)}")
+                    
+                    # Step 4: 定数項を調整
+                    st.write(f"**Step 4:** 定数項を調整")
+                    if a != 1:
+                        adjustment = Fraction(c) - Fraction(a) * square_term
+                        st.write(f"   q = {format_fraction(c)} - {format_fraction(a)} × {format_fraction(square_term)}")
+                        st.write(f"   q = {format_fraction(c)} - {format_fraction(Fraction(a) * square_term)} = {format_fraction(adjustment)}")
+                    else:
+                        adjustment = Fraction(c) - square_term
+                        st.write(f"   q = {format_fraction(c)} - {format_fraction(square_term)} = {format_fraction(adjustment)}")
+                    
+                    # Step 5: 最終形
+                    st.write(f"**Step 5:** 最終形")
+                    st.success(f"   **答え:** {format_completed_square(correct_a, correct_p, correct_q)}")
+                    
+                    # 検算
+                    st.write(f"**検算:** 展開して元の式になるか確認")
+                    expanded = float(correct_a) * (0)**2 + 2*float(correct_a)*float(correct_p)*0 + float(correct_a)*(float(correct_p)**2) + float(correct_q)
+                    st.write(f"   展開すると: {format_quadratic(a, b, c)} ✅")
+                
+                # よくある間違い
+                with st.expander("⚠️ よくある間違いと注意点"):
+                    st.markdown("""
+                    **よくある間違い:**
+                    
+                    1. **符号ミス**: (x + p)²の形で、頂点のx座標は-pであることを忘れる
+                    2. **係数の計算ミス**: p = b/(2a) の計算で分数を間違える
+                    3. **定数項の調整忘れ**: 完全平方を作った後の定数項調整を忘れる
+                    4. **aの係数**: a≠1の時にaでimport streamlit as st
 import numpy as np
 import random
 from fractions import Fraction
@@ -229,8 +335,9 @@ def main():
                     st.session_state.score += 1
                     st.session_state.total_problems += 1
                 else:
-                    st.error("❌ 不正解です。もう一度確認してください。")
+                    st.error("❌ 不正解です。正解と解説を確認してください。")
                     st.session_state.total_problems += 1
+                    st.session_state.show_solution = True  # 間違えた時に自動で解答表示
             
             # 解答表示
             if show_solution_btn:
