@@ -1,7 +1,7 @@
 import streamlit as st
 import random
 
-st.title("平方完成の練習アプリ（難易度選択＆解答表示付き）")
+st.title("平方完成の練習アプリ（難易度選択＆解答表示）")
 
 # 難易度選択
 level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
@@ -28,7 +28,6 @@ def is_correct_answer(a, b, c, user_str):
         expected_term2 = f"(x - {round(-half_b_over_a, 2)})"
         delta = b**2 - 4*a*c
         const_term = -delta / (4 * a)
-        # 簡易判定：平方完成の形の文字列が含まれているか
         if (expected_term1 in user_str or expected_term2 in user_str) and str(round(const_term, 2)) in user_str:
             return True
         else:
@@ -36,7 +35,6 @@ def is_correct_answer(a, b, c, user_str):
     except:
         return False
 
-# セッションで問題管理
 if "current_problem" not in st.session_state or st.session_state.get("last_level", None) != level:
     st.session_state.current_problem = generate_problem(level)
     st.session_state.last_level = level
@@ -55,28 +53,42 @@ if user_input:
     else:
         st.error("残念、不正解です。")
 
-# 解答表示ボタン
 if st.button("模範解答を表示"):
     delta = b**2 - 4*a*c
     half = b / (2 * a)
     const = -delta / (4 * a)
+    
     st.markdown("### 模範解答")
     st.markdown(f"{a}*(x + {round(half, 2)})^2 + {round(const, 2)}")
-    st.markdown("### 解説")
+
+    st.markdown("### 解説（手順）")
     st.markdown(f"""
-平方完成の公式：
+1. 係数 \( a = {a} \)、\( b = {b} \)、定数項 \( c = {c} \) を確認します。  
+2. \(\displaystyle \frac{{b}}{{2a}} = \frac{{{b}}}{{2 \times {a}}} = {round(half, 2)}\) を計算します。  
+3. 式の中の \( x^2 \) と \( x \) の項をまとめて、平方の形に変えます:  
 \[
-ax^2 + bx + c = a\left(x + \frac{{b}}{{2a}}\right)^2 - \frac{{b^2 - 4ac}}{{4a}}
+a x^2 + b x = a \left(x^2 + \frac{{b}}{{a}} x \right) = a \left(x^2 + 2 \times {round(half, 2)} x \right)
+\]  
+4. 平方の形に直すために、  
+\[
+a \left(x + {round(half, 2)} \right)^2 = a \left( x^2 + 2 \times {round(half, 2)} x + \left({round(half, 2)}\right)^2 \right)
+\]  
+なので、元の式との差を調整します。  
+5. 判別式を使って調整項を求めます。  
+\[
+\Delta = b^2 - 4ac = {b}^2 - 4 \times {a} \times {c} = {delta}
 \]
 
-ここで、
+調整項は、
+\[
+-\frac{{\Delta}}{{4a}} = -\frac{{{delta}}}{{4 \times {a}}} = {round(const, 2)}
+\]
 
-- \( a = {a} \)
-- \( b = {b} \)
-- \( c = {c} \)
-- 判別式 \( \Delta = b^2 - 4ac = {delta} \)
-
-を代入して計算しています。
+6. よって平方完成の形は、
+\[
+{a} \left(x + {round(half, 2)} \right)^2 + {round(const, 2)}
+\]
+となります。
     """)
 
-# 新しい問題にしたいときはページリロードか、別のUI追加も可能です。
+
