@@ -1,9 +1,88 @@
-import streamlit as st
+def generate_quadratic_problem(difficulty="basic"):
+    """難易度に応じて二次関数の問題を生成"""
+    if difficulty == "basic":
+        # 基本: a=1, 整数係数
+        a = 1
+        b = random.randint(-10, 10)
+        c = random.randint(-20, 20)
+    elif difficulty == "intermediate":
+        # 中級: a≠1, 整数係数
+        a = random.choice([2, 3, 4, -1, -2, -3])
+        b = random.randint(-12, 12)
+        c = random.randint(-25, 25)
+    else:  # advanced
+        # 上級: 分数係数も含む
+        a = random.choice([1, 2, 3, -1, -2, Fraction(1,2), Fraction(3,2), Fraction(-1,2)])
+        b = random.randint(-15, 15)
+        c = random.randint(-import streamlit as st
 import numpy as np
 import random
 from fractions import Fraction
 
-def generate_quadratic_problem(difficulty="basic"):
+def generate_similar_problem(original_a, original_b, original_c, difficulty="basic"):
+    """間違えた問題に似た問題を生成"""
+    # 元の問題の特徴を分析
+    original_pattern = analyze_problem_pattern(original_a, original_b, original_c)
+    
+    # 似た特徴を持つ問題を生成
+    attempts = 0
+    while attempts < 10:  # 無限ループ防止
+        if difficulty == "basic":
+            a = 1
+            # 元の問題のbの符号と大きさを参考に
+            if original_b > 0:
+                b = random.randint(2, 8) if original_b > 0 else random.randint(-8, -2)
+            else:
+                b = random.randint(-8, -2) if original_b < 0 else random.randint(2, 8)
+            # 似た範囲のc値
+            c_range = abs(original_c)
+            c = random.randint(-c_range-5, c_range+5)
+            
+        elif difficulty == "intermediate":
+            # 元の問題のaの符号を保持
+            a_choices = [2, 3, 4] if original_a > 0 else [-2, -3, -4]
+            a = random.choice(a_choices)
+            
+            # 似た係数パターン
+            b_range = abs(original_b)
+            b = random.randint(-b_range-3, b_range+3)
+            if b == 0:
+                b = random.choice([-2, 2])
+            
+            c_range = abs(original_c)
+            c = random.randint(-c_range-5, c_range+5)
+            
+        else:  # advanced
+            # 分数係数を含む類似問題
+            if isinstance(original_a, Fraction) or abs(original_a) < 1:
+                a = random.choice([Fraction(1,2), Fraction(3,2), Fraction(-1,2), Fraction(-3,2)])
+            else:
+                a = random.choice([2, 3, -1, -2])
+            
+            b_range = abs(original_b)
+            b = random.randint(-b_range-4, b_range+4)
+            c_range = abs(original_c)
+            c = random.randint(-c_range-8, c_range+8)
+        
+        # 元の問題と全く同じにならないようにチェック
+        if not (a == original_a and b == original_b and c == original_c):
+            break
+        attempts += 1
+    
+    return a, b, c
+
+def analyze_problem_pattern(a, b, c):
+    """問題のパターンを分析"""
+    pattern = {
+        'a_positive': float(a) > 0,
+        'b_positive': float(b) > 0,
+        'c_positive': float(c) > 0,
+        'a_magnitude': abs(float(a)),
+        'b_magnitude': abs(float(b)),
+        'c_magnitude': abs(float(c)),
+        'has_fractions': isinstance(a, Fraction) or isinstance(b, Fraction) or isinstance(c, Fraction)
+    }
+    return pattern
     """難易度に応じて二次関数の問題を生成"""
     if difficulty == "basic":
         # 基本: a=1, 整数係数
@@ -185,6 +264,8 @@ def main():
         st.session_state.show_solution = False
         st.session_state.score = 0
         st.session_state.total_problems = 0
+        st.session_state.wrong_problems = []  # 間違えた問題を記録
+        st.session_state.practice_mode = False  # 類似問題練習モード
     
     # 新しい問題を生成
     if st.sidebar.button("新しい問題を生成") or st.session_state.problem_data is None:
@@ -511,21 +592,106 @@ q = {format_fraction(c)} - {format_fraction(square_term)} = {format_fraction(adj
                 
                 
                 # 関連する概念
-                with st.expander("🔗 関連する数学の概念"):
+                with st.expander("🔗 深く理解するために"):
                     vertex_x_val = -float(b) / (2 * float(a))
                     vertex_y_val = float(correct_q)
                     
-                    st.markdown(f"""
-                    **頂点形の利点:**
-                    - 頂点が ({format_fraction(vertex_x_val)}, {format_fraction(vertex_y_val)}) と直接読める
-                    - 軸の方程式: x = {format_fraction(vertex_x_val)}
-                    - 最{'' if float(a) > 0 else '大'}小値: {format_fraction(vertex_y_val)}
+                    st.markdown("### 🎯 平方完成の意味と目的")
                     
-                    **他の表現との関係:**
-                    - 標準形: ax² + bx + c
-                    - 頂点形: a(x - h)² + k  ※符号注意
-                    - 因数分解形: a(x - α)(x - β)
+                    st.markdown("#### 📊 なぜ平方完成をするの？")
+                    st.markdown("""
+                    1. **頂点が見つけやすい**: 座標が直接読める
+                    2. **最大値・最小値がわかる**: グラフの性質が明確
+                    3. **グラフが描きやすい**: 頂点から左右対称に描ける
+                    4. **問題が解きやすい**: 不等式や方程式が簡単になる
                     """)
+                    
+                    st.markdown("#### 🔄 二次関数の3つの表現")
+                    
+                    col_form1, col_form2, col_form3 = st.columns(3)
+                    
+                    with col_form1:
+                        st.markdown("**標準形**")
+                        st.code(f"{format_quadratic(a, b, c)}")
+                        st.markdown("- 一般的な形\n- 係数から判別式が計算できる")
+                    
+                    with col_form2:
+                        st.markdown("**頂点形**")
+                        st.code(f"{format_completed_square(correct_a, correct_p, correct_q)}")
+                        st.markdown("- 頂点が直接読める\n- 最大値・最小値がわかる")
+                    
+                    with col_form3:
+                        st.markdown("**因数分解形**")
+                        discriminant = float(b)**2 - 4*float(a)*float(c)
+                        if discriminant >= 0:
+                            import math
+                            x1 = (-float(b) + math.sqrt(discriminant)) / (2*float(a))
+                            x2 = (-float(b) - math.sqrt(discriminant)) / (2*float(a))
+                            if discriminant > 0:
+                                st.code(f"{format_fraction(a)}(x - {x1:.2f})(x - {x2:.2f})")
+                                st.markdown("- x切片が直接読める\n- 解が2個ある場合")
+                            else:
+                                st.code(f"{format_fraction(a)}(x - {x1:.2f})²")
+                                st.markdown("- x切片が1個（重根）")
+                        else:
+                            st.code("因数分解不可")
+                            st.markdown("- 実根がない場合")
+                    
+                    st.markdown("#### 📈 この問題の二次関数の性質")
+                    
+                    info_col1, info_col2 = st.columns(2)
+                    
+                    with info_col1:
+                        st.markdown("**基本情報**")
+                        st.markdown(f"- **頂点**: ({format_fraction(vertex_x_val)}, {format_fraction(vertex_y_val)})")
+                        st.markdown(f"- **軸の方程式**: x = {format_fraction(vertex_x_val)}")
+                        st.markdown(f"- **開く向き**: {'上向き ↗️' if float(a) > 0 else '下向き ↙️'}")
+                        
+                        if float(a) > 0:
+                            st.markdown(f"- **最小値**: {format_fraction(vertex_y_val)}")
+                        else:
+                            st.markdown(f"- **最大値**: {format_fraction(vertex_y_val)}")
+                    
+                    with info_col2:
+                        st.markdown("**詳細分析**")
+                        discriminant = float(b)**2 - 4*float(a)*float(c)
+                        st.markdown(f"- **判別式**: D = {discriminant:.2f}")
+                        
+                        if discriminant > 0:
+                            st.markdown("- **x切片**: 2個あり")
+                            st.markdown("- **実根**: 2個の異なる解")
+                        elif discriminant == 0:
+                            st.markdown("- **x切片**: 1個（接する）")
+                            st.markdown("- **実根**: 1個（重根）")
+                        else:
+                            st.markdown("- **x切片**: なし")
+                            st.markdown("- **実根**: なし（虚根）")
+                        
+                        st.markdown(f"- **y切片**: {format_fraction(c)}")
+                    
+                    st.markdown("#### 🧮 計算のポイント")
+                    st.markdown("""
+                    **平方完成の核心:**
+                    - `(x + p)² = x² + 2px + p²` の形を作る
+                    - `p = b/(2a)` で必要な値を計算
+                    - 余分な定数項 `p²` を調整する
+                    
+                    **覚えておくべき公式:**
+                    - 頂点のx座標: `-b/(2a)`
+                    - 頂点のy座標: 元の式に x座標を代入
+                    - 判別式: `D = b² - 4ac`
+                    """)
+                    
+                    st.markdown("#### 🎓 実際の応用例")
+                    st.markdown("""
+                    **平方完成が役立つ場面:**
+                    1. **最大値・最小値問題**: 関数の極値を求める
+                    2. **グラフの描画**: 頂点から左右対称に描く
+                    3. **二次不等式**: 解の範囲を求める
+                    4. **物理の問題**: 放物運動の最高点など
+                    5. **最適化問題**: コストや利益の最適値
+                    """)
+                
                 
         
         with col2:
