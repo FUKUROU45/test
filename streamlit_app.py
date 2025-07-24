@@ -51,7 +51,6 @@ def is_correct(a, b, c, user_str):
         const = -delta / (4 * a)
         expected1 = f"(x + {round(half, 2)})"
         expected2 = f"(x - {round(-half, 2)})"
-        # 文字列に模範形が含まれているかを簡易判定
         return (expected1 in user_str or expected2 in user_str) and str(round(const, 2)) in user_str
     except:
         return False
@@ -99,7 +98,6 @@ if user_input:
     else:
         st.error(f"不正解… ⏱ {time_taken}秒")
 
-    # 模範解答と解説を表示
     half = b / (2 * a)
     delta = b**2 - 4*a*c
     const = -delta / (4 * a)
@@ -125,15 +123,14 @@ if answered or remaining <= 0:
     else:
         col1, col2 = st.columns(2)
         with col1:
-            if st.button("次の問題へ"):
+            if st.button("次の問題へ", key=f"next_{st.session_state.question_num}"):
                 st.session_state.question_num += 1
                 st.session_state.problem = None
                 st.session_state.user_input = ""
                 st.session_state.start_time = time.time()
                 st.experimental_rerun()
         with col2:
-            if st.button("問題をスキップ"):
-                # スキップは正解カウントも時間も加算しない
+            if st.button("問題をスキップ", key=f"skip_{st.session_state.question_num}"):
                 st.session_state.question_num += 1
                 st.session_state.problem = None
                 st.session_state.user_input = ""
@@ -144,7 +141,7 @@ if answered or remaining <= 0:
 # 結果表示
 # --------------------
 if st.session_state.finished:
-    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2)
+    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2) if TOTAL_QUESTIONS > 0 else 0
     st.markdown("---")
     st.markdown("## ✅ 結果")
     st.markdown(f"""
@@ -152,8 +149,8 @@ if st.session_state.finished:
 - 平均解答時間：**{avg_time} 秒**
 """)
     if st.button("🔁 もう一度挑戦"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
+        st.session_state.clear()
         st.experimental_rerun()
+
 
 
