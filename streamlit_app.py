@@ -1,11 +1,8 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 import random
-import sympy as sp
 from fractions import Fraction
 import plotly.graph_objects as go
-import plotly.express as px
 
 def generate_quadratic_problem(difficulty="basic"):
     """難易度に応じて二次関数の問題を生成"""
