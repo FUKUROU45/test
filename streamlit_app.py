@@ -30,7 +30,7 @@ if "started" not in st.session_state:
 # ゲーム開始前：難易度選択
 # --------------------
 if not st.session_state.started:
-    st.markdown("## 🎮 ゲーム設定")
+    st.markdown("## 設定")
     st.session_state.level = st.radio("難易度を選んでください", ["初級", "中級", "上級"], horizontal=True)
     
     if st.button("▶ ゲームスタート"):
@@ -181,10 +181,3 @@ if st.session_state.finished:
     if st.button("🔁 最初からやり直す"):
         st.session_state.clear()
         st.rerun()
-
-
-
-
-
-
-
