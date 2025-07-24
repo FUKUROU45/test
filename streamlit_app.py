@@ -1,11 +1,31 @@
 import streamlit as st
 import random
+import time
 
-st.title("平方完成トレーニング")
+st.title("🎯 平方完成 タイムアタックモード（連続問題 & スコア付き）")
 
-# 難易度選択
-level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
+# --------------------
+# 設定
+# --------------------
+LEVEL_TIMES = {"初級": 30, "中級": 45, "上級": 60}
+TOTAL_QUESTIONS = 5
 
+# --------------------
+# セッション初期化
+# --------------------
+if "question_num" not in st.session_state:
+    st.session_state.question_num = 1
+    st.session_state.correct_count = 0
+    st.session_state.total_time = 0.0
+    st.session_state.finished = False
+    st.session_state.problem = None
+    st.session_state.start_time = None
+    st.session_state.user_input = ""
+    st.session_state.level = "初級"
+
+# --------------------
+# 関数
+# --------------------
 def generate_problem(level):
     if level == "初級":
         a = 1
@@ -15,116 +35,104 @@ def generate_problem(level):
         a = random.choice([1, -1, 2, -2])
         b = random.randint(-10, 10)
         c = random.randint(-10, 10)
-    else:  # 上級
+    else:
         a = random.choice([-3, -2, -1, 1, 2, 3])
         b = random.randint(-20, 20)
         c = random.randint(-20, 20)
-    return (a, b, c)
+    return a, b, c
 
-def is_correct_answer(a, b, c, user_str):
+def is_correct(a, b, c, user_str):
     try:
-        half_b_over_a = b / (2 * a)
-        expected_term1 = f"(x + {round(half_b_over_a, 2)})"
-        expected_term2 = f"(x - {round(-half_b_over_a, 2)})"
+        half = b / (2 * a)
         delta = b**2 - 4*a*c
-        const_term = -delta / (4 * a)
-        if (expected_term1 in user_str or expected_term2 in user_str) and str(round(const_term, 2)) in user_str:
-            return True
-        else:
-            return False
+        const = -delta / (4 * a)
+        expected1 = f"(x + {round(half, 2)})"
+        expected2 = f"(x - {round(-half, 2)})"
+        return (expected1 in user_str or expected2 in user_str) and str(round(const, 2)) in user_str
     except:
         return False
 
-# 初回またはレベル変更時に問題生成
-if "current_problem" not in st.session_state or st.session_state.get("last_level", None) != level:
-    st.session_state.current_problem = generate_problem(level)
-    st.session_state.last_level = level
+# --------------------
+# 難易度設定（初回のみ）
+# --------------------
+if st.session_state.question_num == 1:
+    st.session_state.level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
 
-a, b, c = st.session_state.current_problem
+# 問題生成（初期 or 次の問題）
+if st.session_state.problem is None:
+    st.session_state.problem = generate_problem(st.session_state.level)
+    st.session_state.start_time = time.time()
 
-st.markdown(f"次の式を平方完成してください。")
+a, b, c = st.session_state.problem
+time_limit = LEVEL_TIMES[st.session_state.level]
+elapsed = time.time() - st.session_state.start_time
+remaining = int(time_limit - elapsed)
+
+# --------------------
+# タイマー表示 & 入力
+# --------------------
+st.markdown(f"🕒 残り時間：**{max(0, remaining)} 秒**")
 st.latex(f"{a}x^2 + {b}x + {c}")
+user_input = st.text_input("平方完成した式を入力（例：1*(x + 2)**2 - 3）", key=st.session_state.question_num)
 
-user_input = st.text_input("平方完成した式を入力してください（例：2*(x + 3)**2 - 5）")
-
+# --------------------
+# 判定処理
+# --------------------
+answered = False
 if user_input:
-    correct = is_correct_answer(a, b, c, user_input)
-    if correct:
-        st.success("正解です！🎉")
-    else:
-        st.error("残念、不正解です。")
+    time_taken = round(time.time() - st.session_state.start_time, 2)
+    correct = is_correct(a, b, c, user_input)
+    st.session_state.total_time += time_taken
+    answered = True
 
-# 解答と解説表示
-if st.button("模範解答を表示"):
-    delta = b**2 - 4*a*c
+    if correct:
+        st.success(f"正解！ ⏱ {time_taken}秒")
+        st.session_state.correct_count += 1
+    else:
+        st.error(f"不正解… ⏱ {time_taken}秒")
+
+    # 模範解答と解説
     half = b / (2 * a)
+    delta = b**2 - 4*a*c
     const = -delta / (4 * a)
 
     st.markdown("### 模範解答")
     st.markdown(f"{a}*(x + {round(half, 2)})^2 + {round(const, 2)}")
 
-    st.markdown("### 解説（手順）")
+    st.markdown("### 解説")
     st.markdown(f"""
-1. まず、係数を確認します。  
-    - \( a \)（エー）：二次の項の係数、ここでは **{a}**  
-    - \( b \)（ビー）：一次の項の係数、ここでは **{b}**  
-    - \( c \)（シー）：定数項（数字だけの部分）、ここでは **{c}**
+- \( a = {a} \), \( b = {b} \), \( c = {c} \)  
+- \( \\frac{{b}}{{2a}} = {round(half, 2)} \)  
+- 判別式 \( \\Delta = b^2 - 4ac = {delta} \)  
+- 補正項 \( -\\frac{{\\Delta}}{{4a}} = {round(const, 2)} \)  
+- よって平方完成形：\({a}(x + {round(half, 2)})^2 + {round(const, 2)}\)
+    """)
 
-2. 「\( b \) を \( 2a \) で割る」計算をします。  
-    \[
-    \frac{{b}}{{2a}} = \frac{{{b}}}{{2 \times {a}}} = {round(half, 2)}
-    \]  
-    これは平方完成の中心となる値です。
+# --------------------
+# 次の問題 or 終了処理
+# --------------------
+if answered or remaining <= 0:
+    if st.session_state.question_num >= TOTAL_QUESTIONS:
+        st.session_state.finished = True
+    else:
+        if st.button("次の問題へ"):
+            st.session_state.question_num += 1
+            st.session_state.problem = None
+            st.experimental_rerun()
 
-3. 次に、もとの式のうち、\( x^2 \) と \( x \) の項だけを考え、括弧の中の平方の形に直します。  
-    \[
-    a x^2 + b x = a \left(x^2 + \frac{{b}}{{a}} x \right)
-    \]  
-    ここで、括弧内は  
-    \[
-    x^2 + 2 \times {round(half, 2)} x
-    \]  
-    と表せます。
-
-4. この形は次の平方の展開と同じ形です。  
-    \[
-    (x + {round(half, 2)})^2 = x^2 + 2 \times {round(half, 2)} x + \left({round(half, 2)}\right)^2
-    \]  
-    ですが、もとの式には \(\left({round(half, 2)}\right)^2\) の項がありません。そこで調整が必要です。
-
-5. その調整に使うのが「判別式」と呼ばれる値で、次の式で求められます。  
-    \[
-    \Delta = b^2 - 4ac = {b}^2 - 4 \times {a} \times {c} = {delta}
-    \]
-
-6. 調整項は判別式を使い、次の式で計算します。  
-    \[
-    -\frac{{\Delta}}{{4a}} = -\frac{{{delta}}}{{4 \times {a}}} = {round(const, 2)}
-    \]
-
-7. したがって、もとの式は次のように平方完成できます。  
-    \[
-    {a} \left(x + {round(half, 2)} \right)^2 + {round(const, 2)}
-    \]
-
----
-
-### 記号の読み方と意味  
-- \( x \)（エックス）：変数。未知の数です。  
-- \( a, b, c \)：それぞれ係数と定数項。式の形によって値が決まります。  
-- \( \Delta \)（デルタ）：判別式。二次方程式の根の性質を調べるのに使いますが、ここでは平方完成の調整に使っています。  
-- \( (x + p)^2 \)：\( x \) に何かを足して、それを二乗（かける）した形。平方完成の「完成形」です。
-
----
-
-ご不明点あれば遠慮なくどうぞ！  
-さらに機能追加もお手伝いします😊
+# --------------------
+# 結果表示
+# --------------------
+if st.session_state.finished:
+    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2)
+    st.markdown("---")
+    st.markdown("## ✅ 結果")
+    st.markdown(f"""
+- 正解数：**{st.session_state.correct_count} / {TOTAL_QUESTIONS}**
+- 平均解答時間：**{avg_time} 秒**
 """)
-
-# 「次の問題」ボタン
-if st.button("次の問題"):
-    st.session_state.current_problem = generate_problem(level)
-    st.experimental_rerun()
-
-
+    if st.button("🔁 もう一度挑戦"):
+        for key in list(st.session_state.keys()):
+            del st.session_state[key]
+        st.experimental_rerun()
 
