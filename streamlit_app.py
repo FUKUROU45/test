@@ -171,9 +171,13 @@ def main():
     st.sidebar.title("問題設定")
     difficulty = st.sidebar.selectbox(
         "難易度を選択:",
-        ["basic", "intermediate", "advanced"],
-        format_func=lambda x: {"basic": "基本 (a=1)", "intermediate": "中級 (a≠1)", "advanced": "上級 (分数含む)"}[x]
+        ["初級", "中級", "上級"],
+        help="初級: a=1の基本問題、中級: a≠1の問題、上級: 分数係数を含む問題"
     )
+    
+    # 難易度を内部的な値に変換
+    difficulty_map = {"初級": "basic", "中級": "intermediate", "上級": "advanced"}
+    internal_difficulty = difficulty_map[difficulty]
     
     # セッション状態の初期化
     if 'problem_data' not in st.session_state:
@@ -184,11 +188,12 @@ def main():
     
     # 新しい問題を生成
     if st.sidebar.button("新しい問題を生成") or st.session_state.problem_data is None:
-        a, b, c = generate_quadratic_problem(difficulty)
+        a, b, c = generate_quadratic_problem(internal_difficulty)
         correct_a, correct_p, correct_q = solve_completion_of_square(a, b, c)
         st.session_state.problem_data = {
             'original': (a, b, c),
-            'solution': (correct_a, correct_p, correct_q)
+            'solution': (correct_a, correct_p, correct_q),
+            'difficulty': difficulty
         }
         st.session_state.show_solution = False
     
@@ -199,6 +204,8 @@ def main():
         
         # 問題表示
         st.markdown("## 📝 問題")
+        problem_difficulty = st.session_state.problem_data.get('difficulty', '初級')
+        st.markdown(f"**難易度: {problem_difficulty}**")
         st.markdown(f"### 次の二次関数を平方完成してください:")
         st.markdown(f"## {format_quadratic(a, b, c)}")
         
@@ -415,6 +422,15 @@ def main():
             st.sidebar.markdown("### 📊 成績")
             st.sidebar.write(f"正解数: {st.session_state.score}/{st.session_state.total_problems}")
             st.sidebar.write(f"正解率: {accuracy:.1f}%")
+            
+            # 難易度別の詳細表示
+            st.sidebar.markdown("### 🎯 難易度別ガイド")
+            if difficulty == "初級":
+                st.sidebar.info("💡 a=1の基本的な平方完成を練習します")
+            elif difficulty == "中級":
+                st.sidebar.info("💡 a≠1の場合の平方完成を練習します")
+            else:
+                st.sidebar.info("💡 分数係数を含む上級問題を練習します")
             
             if st.sidebar.button("成績をリセット"):
                 st.session_state.score = 0
