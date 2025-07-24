@@ -2,18 +2,21 @@ import streamlit as st
 import random
 import time
 
-st.title("🎯 平方完成 タイムアタックモード（連続問題 & スコア付き）")
+st.set_page_config(page_title="平方完成チャレンジ", layout="centered")
+st.title("🎯 平方完成 タイムアタック")
 
 # --------------------
-# 設定
+# ゲーム設定
 # --------------------
 LEVEL_TIMES = {"初級": 30, "中級": 45, "上級": 60}  # 各難易度の制限時間
-TOTAL_QUESTIONS = 5  # 問題数
+TOTAL_QUESTIONS = 5  # 出題数
 
 # --------------------
 # セッション初期化
 # --------------------
-if "question_num" not in st.session_state:
+if "started" not in st.session_state:
+    st.session_state.started = False
+    st.session_state.level = "初級"
     st.session_state.question_num = 1
     st.session_state.correct_count = 0
     st.session_state.total_time = 0.0
@@ -21,7 +24,19 @@ if "question_num" not in st.session_state:
     st.session_state.problem = None
     st.session_state.start_time = None
     st.session_state.show_result = False
-    st.session_state.level = "初級"  # 初期設定
+
+# --------------------
+# ゲーム開始前：難易度選択
+# --------------------
+if not st.session_state.started:
+    st.markdown("## 🎮 ゲーム設定")
+    st.session_state.level = st.radio("難易度を選んでください", ["初級", "中級", "上級"], horizontal=True)
+    
+    if st.button("▶ ゲームスタート"):
+        st.session_state.started = True
+        st.session_state.problem = None
+        st.rerun()  # 再読み込みしてUIリセット
+    st.stop()
 
 # --------------------
 # 問題生成関数
@@ -42,7 +57,7 @@ def generate_problem(level):
     return a, b, c
 
 # --------------------
-# 解答判定関数
+# 正誤判定関数
 # --------------------
 def is_correct(a, b, c, user_str):
     try:
@@ -56,13 +71,7 @@ def is_correct(a, b, c, user_str):
         return False
 
 # --------------------
-# 難易度設定（最初のみ）
-# --------------------
-if st.session_state.question_num == 1 and not st.session_state.problem:
-    st.session_state.level = st.selectbox("難易度を選んでください", ["初級", "中級", "上級"])
-
-# --------------------
-# 問題生成（未生成時）
+# 問題未生成なら生成
 # --------------------
 if st.session_state.problem is None:
     st.session_state.problem = generate_problem(st.session_state.level)
@@ -77,11 +86,12 @@ remaining = int(time_limit - elapsed)
 # --------------------
 # 表示（タイマー・問題）
 # --------------------
-st.markdown(f"🕒 残り時間：**{max(0, remaining)} 秒**")
+st.markdown(f"### 🧮 第 {st.session_state.question_num} 問 / 全 {TOTAL_QUESTIONS} 問")
+st.markdown(f"⏱ 残り時間：**{max(0, remaining)} 秒**")
 st.latex(f"{a}x^2 + {b}x + {c}")
 
 # --------------------
-# 入力
+# 入力と回答処理
 # --------------------
 if not st.session_state.show_result and remaining > 0:
     user_input = st.text_input("平方完成した式を入力（例：1*(x + 2)**2 - 3）")
@@ -93,16 +103,16 @@ if not st.session_state.show_result and remaining > 0:
         st.session_state.show_result = True
 
         if correct:
-            st.success(f"正解！ ⏱ {time_taken}秒")
+            st.success(f"✅ 正解！ ⏱ 解答時間：{time_taken} 秒")
             st.session_state.correct_count += 1
         else:
-            st.error(f"不正解… ⏱ {time_taken}秒")
+            st.error(f"❌ 不正解… ⏱ 解答時間：{time_taken} 秒")
 elif not st.session_state.show_result and remaining <= 0:
     st.warning("⌛ 時間切れ！")
     st.session_state.show_result = True
 
 # --------------------
-# 結果表示（模範解答・解説）
+# 解説と模範解答
 # --------------------
 if st.session_state.show_result:
     half = b / (2 * a)
@@ -116,10 +126,10 @@ if st.session_state.show_result:
     st.markdown(f"""
 - 与式：\\({a}x^2 + {b}x + {c}\\)
 - \\(a = {a}\\), \\(b = {b}\\), \\(c = {c}\\)
-- \\(\\frac{{b}}{{2a}} = {round(half, 2)}\\)
+- \\(\\frac{{b}}{{2a}} = {round(half, 2)}\\)：これが平方の中の数になります
 - 判別式 \\(\\Delta = b^2 - 4ac = {delta}\\)
-- 補正項 \\(-\\frac{{\\Delta}}{{4a}} = {round(const, 2)}\\)
-- よって：\\({a}(x + {round(half, 2)})^2 + {round(const, 2)}\\)
+- 補正項：\\(-\\frac{{\\Delta}}{{4a}} = {round(const, 2)}\\)
+- よって、平方完成の形は：\\({a}(x + {round(half, 2)})^2 + {round(const, 2)}\\)
     """)
 
     col1, col2 = st.columns(2)
@@ -133,15 +143,14 @@ if st.session_state.show_result:
             st.session_state.problem = None
 
 # --------------------
-# 結果（全問終了時）
+# 最終結果表示
 # --------------------
 if st.session_state.question_num > TOTAL_QUESTIONS:
     st.session_state.finished = True
 
 if st.session_state.finished:
-    # 正答率計算
     accuracy = round((st.session_state.correct_count / TOTAL_QUESTIONS) * 100, 2)
-    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2) if TOTAL_QUESTIONS > 0 else 0
+    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2)
     st.markdown("---")
     st.markdown("## 📊 結果発表")
     st.markdown(f"""
@@ -151,6 +160,8 @@ if st.session_state.finished:
 """)
     if st.button("🔁 最初からやり直す"):
         st.session_state.clear()
+        st.rerun()
+
 
 
 
