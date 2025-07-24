@@ -299,64 +299,216 @@ def main():
                 
                 # 解法の説明
                 with st.expander("📖 詳しい解法の手順", expanded=True):
-                    st.write("**平方完成の手順:**")
-                    st.write(f"**元の式:** {format_quadratic(a, b, c)}")
+                    st.markdown("### 🎯 平方完成の基本的な考え方")
+                    st.info("**目標**: ax² + bx + c を a(x + p)² + q の形に変形する")
                     
-                    # Step 1: aで括り出す（a≠1の場合）
+                    st.markdown("---")
+                    st.markdown("### 📝 ステップ・バイ・ステップ解説")
+                    
+                    # 元の式を強調表示
+                    st.markdown("#### 🔵 与えられた式")
+                    st.markdown(f"##### {format_quadratic(a, b, c)}")
+                    
+                    step_num = 1
+                    
+                    # Step 1: a≠1の場合の処理
                     if a != 1:
-                        st.write(f"**Step 1:** aで括り出す")
+                        st.markdown(f"#### 🔸 Step {step_num}: aで括り出す")
+                        st.markdown("**なぜ？** → a≠1の時は、まずaを前に出して計算しやすくします")
+                        
                         inside_b = Fraction(b) / Fraction(a)
-                        inside_c = Fraction(c) / Fraction(a)
-                        st.write(f"   = {format_fraction(a)}(x² + {format_fraction(inside_b)}x) + {format_fraction(c)}")
-                        st.write(f"   = {format_fraction(a)}(x² + {format_fraction(inside_b)}x + {format_fraction(inside_c - inside_c)}) + {format_fraction(c)}")
+                        st.markdown(f"**計算:**")
+                        st.code(f"""
+元の式: {format_quadratic(a, b, c)}
+     ↓ aで括り出す
+= {format_fraction(a)}(x² + {format_fraction(inside_b)}x) + {format_fraction(c)}
+                        """)
+                        step_num += 1
                     else:
-                        st.write(f"**Step 1:** a = 1なので、そのまま進みます")
-                        inside_b = Fraction(b)
+                        st.markdown(f"#### 🔸 Step {step_num}: 係数の確認")
+                        st.markdown("**確認:** a = 1なので、そのまま平方完成を進めます")
+                        step_num += 1
                     
-                    # Step 2: 平方を作るための値を計算
+                    # Step 2: pの値を計算
+                    st.markdown(f"#### 🔸 Step {step_num}: 平方を作るためのp値を計算")
+                    st.markdown("**公式:** p = b/(2a)")
+                    
                     p_val = Fraction(b) / (2 * Fraction(a))
-                    st.write(f"**Step 2:** 平方を作るための値を計算")
-                    st.write(f"   p = b/(2a) = {format_fraction(b)}/(2×{format_fraction(a)}) = {format_fraction(p_val)}")
+                    st.markdown("**計算過程:**")
+                    st.code(f"""
+p = b/(2a) = {format_fraction(b)}/(2 × {format_fraction(a)})
+  = {format_fraction(b)}/{format_fraction(2 * Fraction(a))}
+  = {format_fraction(p_val)}
+                    """)
                     
-                    # Step 3: 完全平方式を作る
-                    st.write(f"**Step 3:** 完全平方式を作る")
+                    st.markdown("**意味:** (x + p)²を作るために必要な値です")
+                    step_num += 1
+                    
+                    # Step 3: 完全平方式の説明
+                    st.markdown(f"#### 🔸 Step {step_num}: 完全平方式を理解する")
+                    st.markdown("**完全平方式の形:** (x + p)² = x² + 2px + p²")
+                    
                     square_term = p_val ** 2
-                    st.write(f"   (x + {format_fraction(p_val)})² = x² + {format_fraction(2*p_val)}x + {format_fraction(square_term)}")
+                    st.markdown("**具体的に展開すると:**")
+                    st.code(f"""
+(x + {format_fraction(p_val)})² = x² + 2×{format_fraction(p_val)}×x + ({format_fraction(p_val)})²
+                    = x² + {format_fraction(2*p_val)}x + {format_fraction(square_term)}
+                    """)
                     
-                    # Step 4: 定数項を調整
-                    st.write(f"**Step 4:** 定数項を調整")
+                    # 元の式のxの係数と比較
+                    original_x_coeff = Fraction(b) / Fraction(a) if a != 1 else Fraction(b)
+                    st.markdown(f"**確認:** 元の式のxの係数 {format_fraction(original_x_coeff)} と一致！ ✅")
+                    step_num += 1
+                    
+                    # Step 4: 定数項の調整（最も重要）
+                    st.markdown(f"#### 🔸 Step {step_num}: 定数項を調整する（重要！）")
+                    st.markdown("**問題:** 完全平方式を作ると、余分な定数項が生まれます")
+                    
                     if a != 1:
+                        st.markdown("**元の式の構造:**")
+                        st.code(f"""
+{format_fraction(a)}(x² + {format_fraction(Fraction(b)/Fraction(a))}x) + {format_fraction(c)}
+                        """)
+                        
+                        st.markdown("**完全平方式に置き換えると:**")
+                        st.code(f"""
+{format_fraction(a)}[(x + {format_fraction(p_val)})² - {format_fraction(square_term)}] + {format_fraction(c)}
+= {format_fraction(a)}(x + {format_fraction(p_val)})² - {format_fraction(Fraction(a) * square_term)} + {format_fraction(c)}
+= {format_fraction(a)}(x + {format_fraction(p_val)})² + [{format_fraction(c)} - {format_fraction(Fraction(a) * square_term)}]
+                        """)
+                        
                         adjustment = Fraction(c) - Fraction(a) * square_term
-                        st.write(f"   q = {format_fraction(c)} - {format_fraction(a)} × {format_fraction(square_term)}")
-                        st.write(f"   q = {format_fraction(c)} - {format_fraction(Fraction(a) * square_term)} = {format_fraction(adjustment)}")
+                        st.markdown(f"**定数項の計算:**")
+                        st.code(f"""
+q = {format_fraction(c)} - {format_fraction(a)} × {format_fraction(square_term)}
+  = {format_fraction(c)} - {format_fraction(Fraction(a) * square_term)}
+  = {format_fraction(adjustment)}
+                        """)
                     else:
+                        st.markdown("**元の式:**")
+                        st.code(f"x² + {format_fraction(b)}x + {format_fraction(c)}")
+                        
+                        st.markdown("**完全平方式に置き換えると:**")
+                        st.code(f"""
+(x + {format_fraction(p_val)})² - {format_fraction(square_term)} + {format_fraction(c)}
+= (x + {format_fraction(p_val)})² + [{format_fraction(c)} - {format_fraction(square_term)}]
+                        """)
+                        
                         adjustment = Fraction(c) - square_term
-                        st.write(f"   q = {format_fraction(c)} - {format_fraction(square_term)} = {format_fraction(adjustment)}")
+                        st.markdown(f"**定数項の計算:**")
+                        st.code(f"""
+q = {format_fraction(c)} - {format_fraction(square_term)} = {format_fraction(adjustment)}
+                        """)
                     
-                    # Step 5: 最終形
-                    st.write(f"**Step 5:** 最終形")
-                    st.success(f"   **答え:** {format_completed_square(correct_a, correct_p, correct_q)}")
+                    step_num += 1
                     
-                    # 検算
-                    st.write(f"**検算:** 展開して元の式になるか確認")
-                    expanded = float(correct_a) * (0)**2 + 2*float(correct_a)*float(correct_p)*0 + float(correct_a)*(float(correct_p)**2) + float(correct_q)
-                    st.write(f"   展開すると: {format_quadratic(a, b, c)} ✅")
+                    # Step 5: 最終答え
+                    st.markdown(f"#### 🎯 Step {step_num}: 最終答え")
+                    st.success(f"**平方完成の結果:** {format_completed_square(correct_a, correct_p, correct_q)}")
+                    
+                    # Step 6: 検算
+                    st.markdown(f"#### ✅ Step {step_num + 1}: 検算（必ず行いましょう！）")
+                    st.markdown("**方法:** 平方完成した式を展開して、元の式になるか確認")
+                    
+                    # 展開の詳細
+                    st.markdown("**展開過程:**")
+                    if a != 1:
+                        st.code(f"""
+{format_completed_square(correct_a, correct_p, correct_q)}
+= {format_fraction(correct_a)}(x + {format_fraction(correct_p)})² + {format_fraction(correct_q)}
+= {format_fraction(correct_a)}[x² + {format_fraction(2*correct_p)}x + {format_fraction(correct_p**2)}] + {format_fraction(correct_q)}
+= {format_fraction(correct_a)}x² + {format_fraction(correct_a * 2 * correct_p)}x + {format_fraction(correct_a * correct_p**2)} + {format_fraction(correct_q)}
+= {format_fraction(correct_a)}x² + {format_fraction(correct_a * 2 * correct_p)}x + {format_fraction(correct_a * correct_p**2 + correct_q)}
+                        """)
+                    else:
+                        st.code(f"""
+{format_completed_square(correct_a, correct_p, correct_q)}
+= (x + {format_fraction(correct_p)})² + {format_fraction(correct_q)}
+= x² + {format_fraction(2*correct_p)}x + {format_fraction(correct_p**2)} + {format_fraction(correct_q)}
+= x² + {format_fraction(2*correct_p)}x + {format_fraction(correct_p**2 + correct_q)}
+                        """)
+                    
+                    # 係数の確認
+                    expanded_a = correct_a
+                    expanded_b = correct_a * 2 * correct_p
+                    expanded_c = correct_a * correct_p**2 + correct_q
+                    
+                    st.markdown("**係数の確認:**")
+                    st.code(f"""
+元の式の係数: a={format_fraction(a)}, b={format_fraction(b)}, c={format_fraction(c)}
+展開した係数: a={format_fraction(expanded_a)}, b={format_fraction(expanded_b)}, c={format_fraction(expanded_c)}
+                    """)
+                    
+                    # 一致確認
+                    a_match = abs(float(expanded_a) - float(a)) < 1e-10
+                    b_match = abs(float(expanded_b) - float(b)) < 1e-10
+                    c_match = abs(float(expanded_c) - float(c)) < 1e-10
+                    
+                    if a_match and b_match and c_match:
+                        st.success("✅ すべての係数が一致しました！平方完成は正しいです。")
+                    else:
+                        st.error("❌ 係数が一致しません。計算を見直してください。")
+                    
+                    # 視覚的な流れの確認
+                    st.markdown("---")
+                    st.markdown("### 🔄 変形の流れ（まとめ）")
+                    st.code(f"""
+{format_quadratic(a, b, c)}
+          ↓ 平方完成
+{format_completed_square(correct_a, correct_p, correct_q)}
+                    """)
+                    
+                    # 頂点の情報
+                    vertex_x_val = -float(correct_p)
+                    vertex_y_val = float(correct_q)
+                    st.markdown(f"**📍 頂点の座標:** ({format_fraction(vertex_x_val)}, {format_fraction(vertex_y_val)})")
+                    st.markdown(f"**📈 軸の方程式:** x = {format_fraction(vertex_x_val)}")
+                    
+                    if float(a) > 0:
+                        st.markdown(f"**📊 最小値:** {format_fraction(vertex_y_val)} (x = {format_fraction(vertex_x_val)}のとき)")
+                    else:
+                        st.markdown(f"**📊 最大値:** {format_fraction(vertex_y_val)} (x = {format_fraction(vertex_x_val)}のとき)")
+                
                 
                 # よくある間違い
-                with st.expander("⚠️ よくある間違いと注意点"):
+                with st.expander("⚠️ よくある間違いと対策"):
+                    st.markdown("### 🚫 つまずきポイント TOP 5")
+                    
+                    st.markdown("#### 1️⃣ 符号の間違い")
+                    st.error("**間違い例:** y = (x - 3)² + 2 の頂点を (3, 2) と答える")
+                    st.success("**正解:** y = (x - 3)² + 2 = (x - (+3))² + 2 なので頂点は (3, 2)")
+                    st.info("**覚え方:** y = (x + p)² + q の頂点は (-p, q)")
+                    
+                    st.markdown("#### 2️⃣ p値の計算ミス")
+                    st.error("**間違い例:** 2x² + 8x + 3 で p = 8/(2×2) = 2 と計算")
+                    st.success("**正解:** p = b/(2a) = 8/(2×2) = 8/4 = 2")
+                    st.info("**対策:** 分数の計算は慎重に。約分を忘れずに！")
+                    
+                    st.markdown("#### 3️⃣ 定数項の調整忘れ")
+                    st.error("**間違い例:** x² + 6x + 5 を (x + 3)² とそのまま書く")
+                    st.success("**正解:** (x + 3)² - 9 + 5 = (x + 3)² - 4")
+                    st.info("**対策:** 完全平方を作ったら、必ず定数項を調整する")
+                    
+                    st.markdown("#### 4️⃣ a≠1の時の処理忘れ")
+                    st.error("**間違い例:** 2x² + 4x + 1 をそのまま平方完成する")
+                    st.success("**正解:** まず2で括り出す → 2(x² + 2x) + 1")
+                    st.info("**対策:** a≠1の時は必ず最初にaで括り出す")
+                    
+                    st.markdown("#### 5️⃣ 検算をしない")
+                    st.error("**問題:** 計算ミスに気づかない")
+                    st.success("**対策:** 必ず展開して元の式になるか確認")
+                    st.info("**習慣:** 解答後は必ず検算する癖をつける")
+                    
+                    st.markdown("---")
+                    st.markdown("### 💡 成功のコツ")
                     st.markdown("""
-                    **よくある間違い:**
-                    
-                    1. **符号ミス**: (x + p)²の形で、頂点のx座標は-pであることを忘れる
-                    2. **係数の計算ミス**: p = b/(2a) の計算で分数を間違える
-                    3. **定数項の調整忘れ**: 完全平方を作った後の定数項調整を忘れる
-                    4. **aの係数**: a≠1の時にaで括り出すのを忘れる
-                    
-                    **注意点:**
-                    - 分数の計算は慎重に行う
-                    - 各ステップで検算を行う
-                    - 最後に展開して元の式になるか確認する
+                    1. **順序を守る**: Step1→Step2→...と順番通りに進む
+                    2. **途中式を書く**: 暗算せず、必ず途中の計算を書く
+                    3. **分数に慣れる**: 分数の計算に慣れておく
+                    4. **パターンを覚える**: 典型的な問題のパターンを覚える
+                    5. **検算を習慣化**: 必ず最後に検算する
                     """)
+                
                 
                 # 関連する概念
                 with st.expander("🔗 関連する数学の概念"):
