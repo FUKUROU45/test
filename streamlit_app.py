@@ -25,16 +25,16 @@ def generate_problem(level):
     return a, b, c
 
 def format_quadratic(a, b, c):
-    """二次式を文字列で表示"""
+    """二次式を文字列で表示（x^2表記に統一）"""
     terms = []
     
     # x^2の項
     if a == 1:
-        terms.append("x²")
+        terms.append("x^2")
     elif a == -1:
-        terms.append("-x²")
+        terms.append("-x^2")
     else:
-        terms.append(f"{a}x²")
+        terms.append(f"{a}x^2")
     
     # xの項
     if b > 0:
@@ -68,24 +68,24 @@ def calculate_completion(a, b, c):
         return a, h, k
 
 def format_completion_answer(a, h, k):
-    """平方完成の答えを文字列で表示"""
+    """平方完成の答えを文字列で表示（x^2表記に統一）"""
     h_frac = Fraction(h).limit_denominator()
     k_frac = Fraction(k).limit_denominator()
     
     a_str = "" if a == 1 else f"{a}"
     
     if h_frac == 0:
-        x_part = "x²"
+        x_part = "x^2"
     elif h_frac > 0:
         if h_frac.denominator == 1:
-            x_part = f"(x + {h_frac.numerator})²"
+            x_part = f"(x + {h_frac.numerator})^2"
         else:
-            x_part = f"(x + {h_frac})²"
+            x_part = f"(x + {h_frac})^2"
     else:
         if h_frac.denominator == 1:
-            x_part = f"(x - {abs(h_frac.numerator)})²"
+            x_part = f"(x - {abs(h_frac.numerator)})^2"
         else:
-            x_part = f"(x - {abs(h_frac)})²"
+            x_part = f"(x - {abs(h_frac)})^2"
     
     if k_frac == 0:
         k_part = ""
@@ -102,8 +102,27 @@ def format_completion_answer(a, h, k):
     
     return f"{a_str}{x_part}{k_part}"
 
+def normalize_answer(answer):
+    """ユーザー入力を正規化（様々な入力形式に対応）"""
+    if not answer:
+        return ""
+    
+    # スペースを削除
+    normalized = answer.replace(" ", "")
+    
+    # 様々な2乗の表記をx^2に統一
+    normalized = normalized.replace("²", "^2")
+    normalized = normalized.replace("**2", "^2")
+    normalized = normalized.replace("x2", "x^2")  # x2 → x^2
+    normalized = normalized.replace("X", "x")     # 大文字を小文字に
+    
+    # 括弧の正規化
+    normalized = normalized.replace("（", "(").replace("）", ")")
+    
+    return normalized.lower()
+
 def explain_solution_simple(a, b, c):
-    """わかりやすい解説を生成"""
+    """わかりやすい解説を生成（x^2表記に統一）"""
     explanation = "## 🔍 詳しい解説\n\n"
     
     # 元の式
@@ -115,8 +134,8 @@ def explain_solution_simple(a, b, c):
         
         # ステップ1: aでくくる
         explanation += f"**Step 1️⃣: 最高次の係数 `{a}` でくくり出す**\n\n"
-        explanation += f"```\n{original}\n= {a}(x² + {Fraction(b, a)}x) + {c}\n```\n\n"
-        explanation += f"💡 **ポイント**: `{a}x²` と `{b}x` から `{a}` をくくり出すと、括弧の中は `x²` と `{Fraction(b, a)}x` になります\n\n"
+        explanation += f"```\n{original}\n= {a}(x^2 + {Fraction(b, a)}x) + {c}\n```\n\n"
+        explanation += f"💡 **ポイント**: `{a}x^2` と `{b}x` から `{a}` をくくり出すと、括弧の中は `x^2` と `{Fraction(b, a)}x` になります\n\n"
         
         # ステップ2: 平方完成の準備
         half_coeff = Fraction(b, 2*a)
@@ -127,12 +146,12 @@ def explain_solution_simple(a, b, c):
         # ステップ3: 平方完成
         explanation += f"**Step 3️⃣: 平方完成を実行**\n\n"
         half_squared = Fraction(b**2, 4*a**2)
-        explanation += f"```\n{a}(x² + {Fraction(b, a)}x)\n= {a}(x² + {Fraction(b, a)}x + {half_squared} - {half_squared})\n= {a}((x + {half_coeff})² - {half_squared})\n= {a}(x + {half_coeff})² - {Fraction(b**2, 4*a)}\n```\n\n"
+        explanation += f"```\n{a}(x^2 + {Fraction(b, a)}x)\n= {a}(x^2 + {Fraction(b, a)}x + {half_squared} - {half_squared})\n= {a}((x + {half_coeff})^2 - {half_squared})\n= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a)}\n```\n\n"
         
         # ステップ4: 定数項の整理
         explanation += f"**Step 4️⃣: 定数項をまとめる**\n\n"
         k_final = Fraction(4*a*c - b**2, 4*a)
-        explanation += f"```\n= {a}(x + {half_coeff})² - {Fraction(b**2, 4*a)} + {c}\n= {a}(x + {half_coeff})² + {k_final}\n```\n\n"
+        explanation += f"```\n= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a)} + {c}\n= {a}(x + {half_coeff})^2 + {k_final}\n```\n\n"
         
     else:
         explanation += "### 📌 初級・中級レベルの解法（a = 1の場合）\n\n"
@@ -146,13 +165,13 @@ def explain_solution_simple(a, b, c):
         # ステップ2: 平方完成
         half_squared = Fraction(b**2, 4)
         explanation += f"**Step 2️⃣: 平方完成の魔法 ✨**\n\n"
-        explanation += f"```\n{original}\n= x² + {b}x + {half_squared} - {half_squared} + {c}\n= (x + {half_coeff})² - {half_squared} + {c}\n```\n\n"
-        explanation += f"💡 **なぜこうなる？**: `(x + {half_coeff})²` を展開すると `x² + {b}x + {half_squared}` になるからです！\n\n"
+        explanation += f"```\n{original}\n= x^2 + {b}x + {half_squared} - {half_squared} + {c}\n= (x + {half_coeff})^2 - {half_squared} + {c}\n```\n\n"
+        explanation += f"💡 **なぜこうなる？**: `(x + {half_coeff})^2` を展開すると `x^2 + {b}x + {half_squared}` になるからです！\n\n"
         
         # ステップ3: 定数項の計算
         k_final = Fraction(4*c - b**2, 4)
         explanation += f"**Step 3️⃣: 定数項の計算**\n\n"
-        explanation += f"```\n= (x + {half_coeff})² + (-{half_squared} + {c})\n= (x + {half_coeff})² + {k_final}\n```\n\n"
+        explanation += f"```\n= (x + {half_coeff})^2 + (-{half_squared} + {c})\n= (x + {half_coeff})^2 + {k_final}\n```\n\n"
     
     # 最終答え
     a_ans, h_ans, k_ans = calculate_completion(a, b, c)
@@ -165,13 +184,13 @@ def explain_solution_simple(a, b, c):
     explanation += f"### ✅ 検算してみよう！\n\n"
     if a == 1:
         if h_ans == 0:
-            expanded = f"x² + {int(k_ans)}" if k_ans != 0 else "x²"
+            expanded = f"x^2 + {int(k_ans)}" if k_ans != 0 else "x^2"
         else:
             h_frac = Fraction(h_ans).limit_denominator()
             if h_frac > 0:
-                expanded = f"x² + {2*h_frac}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
+                expanded = f"x^2 + {2*h_frac}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
             else:
-                expanded = f"x² - {abs(2*h_frac)}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
+                expanded = f"x^2 - {abs(2*h_frac)}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
     else:
         # 上級の検算は簡略化
         expanded = f"展開すると元の式 {original} に戻ります"
@@ -229,7 +248,7 @@ if not st.session_state.quiz_started:
             "難易度を選択：",
             ["初級", "中級", "上級"],
             index=default_level_index,
-            help="初級：x² + bx、中級：x² + bx + c、上級：ax² + bx + c"
+            help="初級：x^2 + bx、中級：x^2 + bx + c、上級：ax^2 + bx + c"
         )
         
         problem_count = st.selectbox(
@@ -248,11 +267,11 @@ if not st.session_state.quiz_started:
         
         st.write("**レベル説明：**")
         if level == "初級":
-            st.info("x² + bx の形（基礎）")
+            st.info("x^2 + bx の形（基礎）")
         elif level == "中級":
-            st.info("x² + bx + c の形（標準）")
+            st.info("x^2 + bx + c の形（標準）")
         else:
-            st.info("ax² + bx + c の形（応用）")
+            st.info("ax^2 + bx + c の形（応用）")
     
     if st.button("🚀 クイズスタート！", type="primary"):
         # 問題を事前生成
@@ -315,29 +334,28 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         if st.session_state.level == "初級":
             with st.expander("💡 やり方（初級向けヒント）", expanded=False):
                 st.markdown("""
-                ### 🔍 平方完成の基本手順（初級：x² + bx の形）
+                ### 🔍 平方完成の基本手順（初級：x^2 + bx の形）
                 
                 **Step 1️⃣: xの係数を確認**
-                - x² + bx の「b」を見つける
+                - x^2 + bx の「b」を見つける
                 
                 **Step 2️⃣: xの係数の半分を計算**
                 - b ÷ 2 = ? を計算
                 
                 **Step 3️⃣: その値を2乗して足し引き**
-                - x² + bx + (半分)² - (半分)²
+                - x^2 + bx + (半分)^2 - (半分)^2
                 
                 **Step 4️⃣: 完全平方式を作る**
-                - (x + 半分)² - (半分)²
+                - (x + 半分)^2 - (半分)^2
                 
-                **例：x² + 6x の場合**
+                **例：x^2 + 6x の場合**
                 1. xの係数：6
                 2. その半分：6 ÷ 2 = 3
-                3. 足して引く：x² + 6x + 9 - 9
-                4. 完成：(x + 3)² - 9
+                3. 足して引く：x^2 + 6x + 9 - 9
+                4. 完成：(x + 3)^2 - 9
                 
                 💡 **覚え方**: 「半分の2乗を足して引く」！
                 """)
-        
         
         # 正解計算
         correct_a, correct_h, correct_k = calculate_completion(a, b, c)
@@ -347,7 +365,7 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         user_answer = st.text_input(
             "答えを入力：",
             key=f"answer_{st.session_state.current_problem}",
-            help="例: (x - 2)² + 3, 2(x + 1/2)² - 1"
+            help="例: (x - 2)^2 + 3, 2(x + 1/2)^2 - 1"
         )
         
         col1, col2, col3 = st.columns(3)
@@ -359,12 +377,12 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
             if answered_key not in st.session_state:
                 if st.button("✅ 回答", type="primary"):
                     if user_answer.strip():
-                        # 答え合わせ
-                        user_clean = user_answer.replace(" ", "").replace("²", "^2")
-                        correct_clean = correct_answer.replace(" ", "").replace("²", "^2")
+                        # 答え合わせ（正規化関数を使用）
+                        user_normalized = normalize_answer(user_answer)
+                        correct_normalized = normalize_answer(correct_answer)
                         
                         # 正誤判定を保存
-                        if user_clean.lower() == correct_clean.lower():
+                        if user_normalized == correct_normalized:
                             st.session_state[f"result_{st.session_state.current_problem}"] = "correct"
                             st.session_state.correct_answers += 1
                         else:
@@ -551,19 +569,13 @@ with st.sidebar:
     
     ### ✨ 覚え方
     - 「**半分の2乗**を足して引く」
-    - 「**(x + 半分)²**の形を作る」
+    - 「**(x + 半分)^2**の形を作る」
     
     ### 🔢 よくある間違い
     - 符号の間違い（+ と - を逆にする）
     - 分数の計算ミス
     - 定数項の計算忘れ
-    """)
     
-    if st.session_state.quiz_started and not st.session_state.quiz_finished:
-        st.header("⚡ クイック参考")
-        st.markdown("""
-        **入力例:**
-        - `(x + 2)² - 1`
-        - `2(x - 3)² + 5`
-        - `(x + 1/2)² - 1/4`
-        """)
+    ### 💻 入力方法
+    **答えの入力例:**
+    - `(x
