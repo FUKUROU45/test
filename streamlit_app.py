@@ -314,7 +314,7 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
             help="例: (x - 2)² + 3, 2(x + 1/2)² - 1"
         )
         
-        col1, col2 = st.columns(2)
+        col1, col2, col3 = st.columns(3)
         
         with col1:
             if st.button("✅ 回答", type="primary"):
@@ -342,6 +342,14 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                     st.warning("答えを入力してください")
         
         with col2:
+            if st.button("📖 解説を見る"):
+                explanation_key = f"show_explanation_{st.session_state.current_problem}"
+                if explanation_key not in st.session_state:
+                    st.session_state[explanation_key] = False
+                st.session_state[explanation_key] = not st.session_state[explanation_key]
+                st.rerun()
+        
+        with col3:
             if st.button("⏭️ スキップ"):
                 st.session_state.wrong_problems.append((a, b, c, "スキップ"))
                 st.session_state.current_problem += 1
@@ -350,6 +358,15 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                     st.session_state.quiz_finished = True
                 
                 st.rerun()
+        
+        # 解説表示
+        explanation_key = f"show_explanation_{st.session_state.current_problem}"
+        if explanation_key in st.session_state and st.session_state[explanation_key]:
+            st.markdown("---")
+            with st.container():
+                explanation = explain_solution_simple(a, b, c)
+                st.markdown(explanation)
+            st.markdown("---")
 
 # 結果表示
 elif st.session_state.quiz_finished:
