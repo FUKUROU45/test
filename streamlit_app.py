@@ -419,13 +419,44 @@ elif st.session_state.quiz_finished:
                 explanation = explain_solution_simple(a, b, c)
                 st.markdown(explanation)
     
-    # リスタートボタン
-    if st.button("🔄 もう一度挑戦", type="primary"):
-        # セッション状態リセット
-        for key in list(st.session_state.keys()):
-            if key.startswith(('quiz_', 'current_', 'correct_', 'start_', 'time_', 'problems', 'wrong_')):
+    # 操作ボタン
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🏠 最初のページに戻る", type="primary"):
+            # セッション状態を完全リセット
+            for key in list(st.session_state.keys()):
                 del st.session_state[key]
-        st.rerun()
+            st.rerun()
+    
+    with col2:
+        if st.button("🔄 同じ設定で再挑戦"):
+            # クイズ関連のみリセット（設定は保持）
+            level = st.session_state.level
+            problem_count = st.session_state.problem_count
+            time_limit = st.session_state.time_limit
+            
+            # 問題を新たに生成
+            problems = []
+            for _ in range(problem_count):
+                a, b, c = generate_problem(level)
+                problems.append((a, b, c))
+            
+            # 必要な状態のみリセット
+            st.session_state.problems = problems
+            st.session_state.current_problem = 0
+            st.session_state.correct_answers = 0
+            st.session_state.start_time = time.time()
+            st.session_state.time_up = False
+            st.session_state.quiz_finished = False
+            st.session_state.wrong_problems = []
+            
+            # 解説表示状態をリセット
+            for key in list(st.session_state.keys()):
+                if key.startswith('show_explanation_'):
+                    del st.session_state[key]
+            
+            st.rerun()
 
 # サイドバー：ヒント
 with st.sidebar:
