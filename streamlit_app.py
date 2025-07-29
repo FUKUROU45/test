@@ -1,183 +1,247 @@
 import streamlit as st
 import random
-import time
+import math
+from fractions import Fraction
 
-# ページ設定
-st.set_page_config(page_title="平方完成チャレンジ", layout="centered")
-st.title("平方完成トレーニング")
-
-# --------------------
-# ゲーム設定
-# --------------------
-LEVEL_TIMES = {"初級": 30, "中級": 45, "上級": 60}  # 各難易度の制限時間
-TOTAL_QUESTIONS = 5  # 出題数
-
-# --------------------
-# セッション初期化
-# --------------------
-if "started" not in st.session_state:
-    st.session_state.started = False
-    st.session_state.level = "初級"
-    st.session_state.question_num = 1
-    st.session_state.correct_count = 0
-    st.session_state.total_time = 0.0
-    st.session_state.finished = False
-    st.session_state.problem = None
-    st.session_state.start_time = None
-    st.session_state.show_result = False
-
-# --------------------
-# ゲーム開始前：難易度選択
-# --------------------
-if not st.session_state.started:
-    st.markdown("## 設定")
-    st.session_state.level = st.radio("難易度を選んでください", ["初級", "中級", "上級"], horizontal=True)
-    
-    if st.button("▶ ゲームスタート"):
-        st.session_state.started = True
-        st.session_state.problem = None
-        st.rerun()  # 再読み込みしてUIリセット
-    st.stop()
-
-# --------------------
-# 問題生成関数
-# --------------------
 def generate_problem(level):
+    """レベルに応じて問題を生成"""
     if level == "初級":
+        # x^2 + bx 形式（b は偶数）
+        b = random.choice([-8, -6, -4, -2, 2, 4, 6, 8])
         a = 1
-        b = random.randint(-5, 5)
-        c = random.randint(-5, 5)
+        c = 0
     elif level == "中級":
-        a = random.choice([1, -1, 2, -2])
-        b = random.randint(-10, 10)
+        # x^2 + bx + c 形式
+        a = 1
+        b = random.choice([-10, -8, -6, -4, -2, 2, 4, 6, 8, 10])
+        c = random.randint(-5, 5)
+    else:  # 上級
+        # ax^2 + bx + c 形式（a ≠ 1）
+        a = random.choice([-3, -2, 2, 3])
+        b = random.choice([-8, -6, -4, -2, 2, 4, 6, 8])
         c = random.randint(-10, 10)
-    else:
-        a = random.choice([-3, -2, -1, 1, 2, 3])
-        b = random.randint(-20, 20)
-        c = random.randint(-20, 20)
+    
     return a, b, c
 
-# --------------------
-# 正誤判定関数
-# --------------------
-def is_correct(a, b, c, user_str):
-    try:
-        half = b / (2 * a)
-        delta = b**2 - 4*a*c
-        const = -delta / (4 * a)
-        expected1 = f"(x + {round(half, 2)})"
-        expected2 = f"(x - {round(-half, 2)})"
-        return (expected1 in user_str or expected2 in user_str) and str(round(const, 2)) in user_str
-    except:
-        return False
-
-# --------------------
-# 問題未生成なら生成
-# --------------------
-if st.session_state.problem is None:
-    st.session_state.problem = generate_problem(st.session_state.level)
-    st.session_state.start_time = time.time()
-    st.session_state.show_result = False
-
-a, b, c = st.session_state.problem
-time_limit = LEVEL_TIMES[st.session_state.level]
-elapsed = time.time() - st.session_state.start_time
-remaining = int(time_limit - elapsed)
-
-# --------------------
-# 表示（タイマー・問題）
-# --------------------
-st.markdown(f"### 🧮 第 {st.session_state.question_num} 問 / 全 {TOTAL_QUESTIONS} 問")
-st.markdown(f"⏱ 残り時間：**{max(0, remaining)} 秒**")
-st.latex(f"{a}x^2 + {b}x + {c}")
-
-# --------------------
-# 入力と回答処理
-# --------------------
-if not st.session_state.show_result and remaining > 0:
-    user_input = st.text_input("平方完成した式を入力（例：1*(x + 2)**2 - 3）")
-
-    if st.button("解答する"):
-        time_taken = round(time.time() - st.session_state.start_time, 2)
-        correct = is_correct(a, b, c, user_input)
-        st.session_state.total_time += time_taken
-        st.session_state.show_result = True
-
-        if correct:
-            st.success(f"✅ 正解！ ⏱ 解答時間：{time_taken} 秒")
-            st.session_state.correct_count += 1
+def format_quadratic(a, b, c):
+    """二次式を文字列で表示"""
+    terms = []
+    
+    # x^2の項
+    if a == 1:
+        terms.append("x²")
+    elif a == -1:
+        terms.append("-x²")
+    else:
+        terms.append(f"{a}x²")
+    
+    # xの項
+    if b > 0:
+        if b == 1:
+            terms.append("+ x")
         else:
-            st.error(f"❌ 不正解… ⏱ 解答時間：{time_taken} 秒")
-elif not st.session_state.show_result and remaining <= 0:
-    st.warning("⌛ 時間切れ！")
-    st.session_state.show_result = True
+            terms.append(f"+ {b}x")
+    elif b < 0:
+        if b == -1:
+            terms.append("- x")
+        else:
+            terms.append(f"- {abs(b)}x")
+    
+    # 定数項
+    if c > 0:
+        terms.append(f"+ {c}")
+    elif c < 0:
+        terms.append(f"- {abs(c)}")
+    
+    return " ".join(terms) if terms else "0"
 
-# --------------------
-# 解説と模範解答
-# --------------------
-if st.session_state.show_result:
-    half = b / (2 * a)
-    delta = b**2 - 4*a*c
-    const = -delta / (4 * a)
+def calculate_completion(a, b, c):
+    """平方完成の答えを計算"""
+    if a == 1:
+        # x^2 + bx + c = (x + b/2)^2 + (c - b^2/4)
+        h = -b / 2
+        k = c - (b**2) / 4
+        return 1, h, k
+    else:
+        # ax^2 + bx + c = a(x + b/(2a))^2 + (c - b^2/(4a))
+        h = -b / (2 * a)
+        k = c - (b**2) / (4 * a)
+        return a, h, k
 
-    st.markdown("### ✅ 模範解答")
-    st.latex(f"{a}(x + {round(half, 2)})^2 + {round(const, 2)}")
+def format_completion_answer(a, h, k):
+    """平方完成の答えを文字列で表示"""
+    # h を分数で表示
+    h_frac = Fraction(h).limit_denominator()
+    k_frac = Fraction(k).limit_denominator()
+    
+    # a の係数
+    a_str = "" if a == 1 else f"{a}"
+    
+    # (x + h) の部分
+    if h_frac == 0:
+        x_part = "x²"
+    elif h_frac > 0:
+        if h_frac.denominator == 1:
+            x_part = f"(x + {h_frac.numerator})²"
+        else:
+            x_part = f"(x + {h_frac})²"
+    else:
+        if h_frac.denominator == 1:
+            x_part = f"(x - {abs(h_frac.numerator)})²"
+        else:
+            x_part = f"(x - {abs(h_frac)})²"
+    
+    # k の部分
+    if k_frac == 0:
+        k_part = ""
+    elif k_frac > 0:
+        if k_frac.denominator == 1:
+            k_part = f" + {k_frac.numerator}"
+        else:
+            k_part = f" + {k_frac}"
+    else:
+        if k_frac.denominator == 1:
+            k_part = f" - {abs(k_frac.numerator)}"
+        else:
+            k_part = f" - {abs(k_frac)}"
+    
+    return f"{a_str}{x_part}{k_part}"
 
-    st.markdown("### 🧠 解説")
-    st.markdown(f"""
-#### 🔢 与えられた式
-\\[
-{a}x^2 + {b}x + {c}
-\\]
+def explain_solution(a, b, c):
+    """解法の解説を生成"""
+    explanation = f"**解法の手順：**\n\n"
+    explanation += f"元の式：{format_quadratic(a, b, c)}\n\n"
+    
+    if a != 1:
+        explanation += f"**ステップ1：** 最高次の係数 {a} でくくり出す\n"
+        explanation += f"{a}(x² + {Fraction(b, a)}x) + {c}\n\n"
+        
+        explanation += f"**ステップ2：** x の係数の半分を求める\n"
+        explanation += f"x の係数：{Fraction(b, a)}\n"
+        explanation += f"その半分：{Fraction(b, a)} ÷ 2 = {Fraction(b, 2*a)}\n\n"
+        
+        explanation += f"**ステップ3：** 平方完成する\n"
+        explanation += f"{a}(x² + {Fraction(b, a)}x + ({Fraction(b, 2*a)})² - ({Fraction(b, 2*a)})²) + {c}\n"
+        explanation += f"= {a}((x + {Fraction(b, 2*a)})² - {Fraction(b**2, 4*a**2)}) + {c}\n"
+        explanation += f"= {a}(x + {Fraction(b, 2*a)})² - {Fraction(b**2, 4*a)} + {c}\n"
+        explanation += f"= {a}(x + {Fraction(b, 2*a)})² + {Fraction(4*a*c - b**2, 4*a)}\n\n"
+    else:
+        explanation += f"**ステップ1：** x の係数の半分を求める\n"
+        explanation += f"x の係数：{b}\n"
+        explanation += f"その半分：{b} ÷ 2 = {Fraction(b, 2)}\n\n"
+        
+        explanation += f"**ステップ2：** 平方完成する\n"
+        explanation += f"x² + {b}x + {c}\n"
+        explanation += f"= x² + {b}x + ({Fraction(b, 2)})² - ({Fraction(b, 2)})² + {c}\n"
+        explanation += f"= (x + {Fraction(b, 2)})² - {Fraction(b**2, 4)} + {c}\n"
+        explanation += f"= (x + {Fraction(b, 2)})² + {Fraction(4*c - b**2, 4)}\n\n"
+    
+    a_ans, h_ans, k_ans = calculate_completion(a, b, c)
+    explanation += f"**答え：** {format_completion_answer(a_ans, h_ans, k_ans)}"
+    
+    return explanation
 
-#### 🧭 手順1：a, b, c の値を確認
-- \\(a = {a}\\)：2次の係数（\\(x^2\\) の前の数）
-- \\(b = {b}\\)：1次の係数（\\(x\\) の前の数）
-- \\(c = {c}\\)：定数項（ただの数）
+# Streamlit アプリのメイン部分
+st.title("🧮 平方完成 練習アプリ")
+st.write("二次式を平方完成する練習をしましょう！")
 
-#### ✏️ 手順2：「かっこの中」の数を求める
-- \\( \\frac{{b}}{{2a}} = \\frac{{{b}}}{{2×{a}}} = {round(half, 2)} \\)
-- これは、「\\(x\\) に足す（または引く）」数です  
-  → 記号の読み方：\\(x + {round(half, 2)}\\) は「エックス たす {round(half, 2)}」
+# セッション状態の初期化
+if 'problem_generated' not in st.session_state:
+    st.session_state.problem_generated = False
+if 'correct_answers' not in st.session_state:
+    st.session_state.correct_answers = 0
+if 'total_answers' not in st.session_state:
+    st.session_state.total_answers = 0
+if 'show_explanation' not in st.session_state:
+    st.session_state.show_explanation = False
 
-#### 🧮 手順3：補正項（最後に足す数）を計算
-- 判別式：\\( \\Delta = b^2 - 4ac = {b}^2 - 4×{a}×{c} = {delta} \\)
-- 補正項：\\( -\\frac{{\\Delta}}{{4a}} = -\\frac{{{delta}}}{{4×{a}}} = {round(const, 2)} \\)
+# レベル選択
+level = st.selectbox(
+    "難易度を選択してください：",
+    ["初級", "中級", "上級"],
+    help="初級：x² + bx、中級：x² + bx + c、上級：ax² + bx + c"
+)
 
-#### 🏁 最終的な平方完成の形
-\\[
-{a}(x + {round(half, 2)})^2 + {round(const, 2)}
-\\]
+# 問題生成ボタン
+if st.button("新しい問題を生成"):
+    st.session_state.a, st.session_state.b, st.session_state.c = generate_problem(level)
+    st.session_state.problem_generated = True
+    st.session_state.show_explanation = False
 
-これは、「{a} かける（エックス たす {round(half, 2)}）の2乗、プラス {round(const, 2)}」という形です。
+# 問題表示
+if st.session_state.problem_generated:
+    st.subheader("問題")
+    problem_text = format_quadratic(st.session_state.a, st.session_state.b, st.session_state.c)
+    st.write(f"次の二次式を平方完成してください：")
+    st.markdown(f"### {problem_text}")
+    
+    # 正解を計算
+    correct_a, correct_h, correct_k = calculate_completion(
+        st.session_state.a, st.session_state.b, st.session_state.c
+    )
+    correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+    
+    # ユーザーの回答入力
+    user_answer = st.text_input(
+        "答えを入力してください（例：2(x - 3)² + 1）：",
+        help="分数は「1/2」のように入力してください"
+    )
+    
+    # 答え合わせボタン
+    if st.button("答え合わせ"):
+        if user_answer.strip():
+            st.session_state.total_answers += 1
+            
+            # 簡単な答え合わせ（完全ではないが、基本的なケースに対応）
+            user_clean = user_answer.replace(" ", "").replace("²", "^2")
+            correct_clean = correct_answer.replace(" ", "").replace("²", "^2")
+            
+            if user_clean.lower() == correct_clean.lower():
+                st.success("🎉 正解です！")
+                st.session_state.correct_answers += 1
+                st.balloons()
+            else:
+                st.error("❌ 不正解です。解説を確認してください。")
+                st.session_state.show_explanation = True
+            
+            st.write(f"**正解：** {correct_answer}")
+        else:
+            st.warning("答えを入力してください。")
+    
+    # 解説表示
+    if st.session_state.show_explanation or st.button("解説を見る"):
+        with st.expander("📖 詳しい解説", expanded=True):
+            explanation = explain_solution(st.session_state.a, st.session_state.b, st.session_state.c)
+            st.markdown(explanation)
+
+# 統計表示
+if st.session_state.total_answers > 0:
+    accuracy = (st.session_state.correct_answers / st.session_state.total_answers) * 100
+    st.sidebar.write("## 📊 成績")
+    st.sidebar.write(f"正解数: {st.session_state.correct_answers}")
+    st.sidebar.write(f"総問題数: {st.session_state.total_answers}")
+    st.sidebar.write(f"正答率: {accuracy:.1f}%")
+    
+    if st.sidebar.button("成績をリセット"):
+        st.session_state.correct_answers = 0
+        st.session_state.total_answers = 0
+
+# 使い方の説明
+with st.expander("📋 使い方とレベル説明"):
+    st.markdown("""
+    **使い方：**
+    1. 難易度を選択してください
+    2. 「新しい問題を生成」ボタンを押してください
+    3. 表示された問題を平方完成してください
+    4. 答えを入力して「答え合わせ」ボタンを押してください
+    
+    **レベル説明：**
+    - **初級**：x² + bx の形（定数項なし、最高次係数1）
+    - **中級**：x² + bx + c の形（最高次係数1）
+    - **上級**：ax² + bx + c の形（最高次係数が1以外）
+    
+    **入力例：**
+    - (x + 2)² + 3
+    - 2(x - 1/2)² - 4
+    - -3(x + 1)² + 5
     """)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("次の問題へ"):
-            st.session_state.question_num += 1
-            st.session_state.problem = None
-    with col2:
-        if st.button("問題をスキップ"):
-            st.session_state.question_num += 1
-            st.session_state.problem = None
-
-# --------------------
-# 最終結果表示
-# --------------------
-if st.session_state.question_num > TOTAL_QUESTIONS:
-    st.session_state.finished = True
-
-if st.session_state.finished:
-    accuracy = round((st.session_state.correct_count / TOTAL_QUESTIONS) * 100, 2)
-    avg_time = round(st.session_state.total_time / TOTAL_QUESTIONS, 2)
-    st.markdown("---")
-    st.markdown("## 📊 結果発表")
-    st.markdown(f"""
-- 正解数：**{st.session_state.correct_count} / {TOTAL_QUESTIONS}**
-- 正答率：**{accuracy}%**
-- 平均解答時間：**{avg_time} 秒**
-""")
-    if st.button("🔁 最初からやり直す"):
-        st.session_state.clear()
-        st.rerun()
