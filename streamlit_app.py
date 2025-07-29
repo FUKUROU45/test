@@ -316,51 +316,71 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         
         col1, col2, col3 = st.columns(3)
         
+        # 回答状態をチェック
+        answered_key = f"answered_{st.session_state.current_problem}"
+        
         with col1:
-            if st.button("✅ 回答", type="primary"):
-                if user_answer.strip():
-                    # 答え合わせ
-                    user_clean = user_answer.replace(" ", "").replace("²", "^2")
-                    correct_clean = correct_answer.replace(" ", "").replace("²", "^2")
-                    
-                    if user_clean.lower() == correct_clean.lower():
+            if answered_key not in st.session_state:
+                if st.button("✅ 回答", type="primary"):
+                    if user_answer.strip():
+                        # 答え合わせ
+                        user_clean = user_answer.replace(" ", "").replace("²", "^2")
+                        correct_clean = correct_answer.replace(" ", "").replace("²", "^2")
+                        
+                        # 正誤判定を保存
+                        if user_clean.lower() == correct_clean.lower():
+                            st.session_state[f"result_{st.session_state.current_problem}"] = "correct"
+                            st.session_state.correct_answers += 1
+                        else:
+                            st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
+                            st.session_state.wrong_problems.append((a, b, c, user_answer))
+                        
+                        # 回答済みフラグを設定
+                        st.session_state[answered_key] = True
+                        st.rerun()
+                    else:
+                        st.warning("答えを入力してください")
+            else:
+                # 既に回答済みの場合は結果を表示
+                result_key = f"result_{st.session_state.current_problem}"
+                if result_key in st.session_state:
+                    if st.session_state[result_key] == "correct":
                         st.success("🎉 正解！")
-                        st.session_state.correct_answers += 1
                     else:
                         st.error(f"❌ 不正解　正解: {correct_answer}")
-                        st.session_state.wrong_problems.append((a, b, c, user_answer))
-                    
-                    # 回答後は解説を自動表示
-                    explanation_key = f"show_explanation_{st.session_state.current_problem}"
-                    st.session_state[explanation_key] = True
-                    
-                    # 次の問題へ進むためのフラグを設定
-                    st.session_state[f"answered_{st.session_state.current_problem}"] = True
-                    
-                    st.rerun()
-                else:
-                    st.warning("答えを入力してください")
-        
-        with col2:
-            if st.button("📖 解説を見る"):
+                
+                # 解説表示ボタン
                 explanation_key = f"show_explanation_{st.session_state.current_problem}"
                 if explanation_key not in st.session_state:
-                    st.session_state[explanation_key] = False
-                st.session_state[explanation_key] = not st.session_state[explanation_key]
-                st.rerun()
+                    if st.button("📖 解説を見る", type="secondary"):
+                        st.session_state[explanation_key] = True
+                        st.rerun()
+                else:
+                    st.write("📖 解説表示中")
+        
+        with col2:
+            # 手動で解説を表示するボタン（回答前でも使用可能）
+            if answered_key not in st.session_state:
+                if st.button("📖 解説を見る"):
+                    explanation_key = f"show_explanation_{st.session_state.current_problem}"
+                    if explanation_key not in st.session_state:
+                        st.session_state[explanation_key] = False
+                    st.session_state[explanation_key] = not st.session_state[explanation_key]
+                    st.rerun()
         
         with col3:
             # 回答後は「次の問題へ」ボタンを表示
-            answered_key = f"answered_{st.session_state.current_problem}"
             if answered_key in st.session_state and st.session_state[answered_key]:
-                if st.button("➡️ 次の問題へ", type="secondary"):
-                    # 次の問題へ
-                    st.session_state.current_problem += 1
-                    
-                    if st.session_state.current_problem >= st.session_state.problem_count:
-                        st.session_state.quiz_finished = True
-                    
-                    st.rerun()
+                explanation_key = f"show_explanation_{st.session_state.current_problem}"
+                if explanation_key in st.session_state:
+                    if st.button("➡️ 次の問題へ", type="primary"):
+                        # 次の問題へ
+                        st.session_state.current_problem += 1
+                        
+                        if st.session_state.current_problem >= st.session_state.problem_count:
+                            st.session_state.quiz_finished = True
+                        
+                        st.rerun()
             else:
                 if st.button("⏭️ スキップ"):
                     st.session_state.wrong_problems.append((a, b, c, "スキップ"))
@@ -465,7 +485,7 @@ elif st.session_state.quiz_finished:
             
             # 解説表示状態をリセット
             for key in list(st.session_state.keys()):
-                if key.startswith('show_explanation_') or key.startswith('answered_'):
+                if key.startswith(('show_explanation_', 'answered_', 'result_')):
                     del st.session_state[key]
             
             st.rerun()
