@@ -330,13 +330,13 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                         st.error(f"❌ 不正解　正解: {correct_answer}")
                         st.session_state.wrong_problems.append((a, b, c, user_answer))
                     
-                    # 次の問題へ
-                    st.session_state.current_problem += 1
+                    # 回答後は解説を自動表示
+                    explanation_key = f"show_explanation_{st.session_state.current_problem}"
+                    st.session_state[explanation_key] = True
                     
-                    if st.session_state.current_problem >= st.session_state.problem_count:
-                        st.session_state.quiz_finished = True
+                    # 次の問題へ進むためのフラグを設定
+                    st.session_state[f"answered_{st.session_state.current_problem}"] = True
                     
-                    time.sleep(1)
                     st.rerun()
                 else:
                     st.warning("答えを入力してください")
@@ -350,14 +350,26 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 st.rerun()
         
         with col3:
-            if st.button("⏭️ スキップ"):
-                st.session_state.wrong_problems.append((a, b, c, "スキップ"))
-                st.session_state.current_problem += 1
-                
-                if st.session_state.current_problem >= st.session_state.problem_count:
-                    st.session_state.quiz_finished = True
-                
-                st.rerun()
+            # 回答後は「次の問題へ」ボタンを表示
+            answered_key = f"answered_{st.session_state.current_problem}"
+            if answered_key in st.session_state and st.session_state[answered_key]:
+                if st.button("➡️ 次の問題へ", type="secondary"):
+                    # 次の問題へ
+                    st.session_state.current_problem += 1
+                    
+                    if st.session_state.current_problem >= st.session_state.problem_count:
+                        st.session_state.quiz_finished = True
+                    
+                    st.rerun()
+            else:
+                if st.button("⏭️ スキップ"):
+                    st.session_state.wrong_problems.append((a, b, c, "スキップ"))
+                    st.session_state.current_problem += 1
+                    
+                    if st.session_state.current_problem >= st.session_state.problem_count:
+                        st.session_state.quiz_finished = True
+                    
+                    st.rerun()
         
         # 解説表示
         explanation_key = f"show_explanation_{st.session_state.current_problem}"
@@ -453,7 +465,7 @@ elif st.session_state.quiz_finished:
             
             # 解説表示状態をリセット
             for key in list(st.session_state.keys()):
-                if key.startswith('show_explanation_'):
+                if key.startswith('show_explanation_') or key.startswith('answered_'):
                     del st.session_state[key]
             
             st.rerun()
