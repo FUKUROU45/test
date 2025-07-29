@@ -303,6 +303,34 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         st.write("次の二次式を平方完成してください：")
         st.markdown(f"### 📝 {problem_text}")
         
+        # 初級レベルのみ「やり方」を表示
+        if st.session_state.level == "初級":
+            with st.expander("💡 やり方（初級向けヒント）", expanded=False):
+                st.markdown("""
+                ### 🔍 平方完成の基本手順（初級：x² + bx の形）
+                
+                **Step 1️⃣: xの係数を確認**
+                - x² + bx の「b」を見つける
+                
+                **Step 2️⃣: xの係数の半分を計算**
+                - b ÷ 2 = ? を計算
+                
+                **Step 3️⃣: その値を2乗して足し引き**
+                - x² + bx + (半分)² - (半分)²
+                
+                **Step 4️⃣: 完全平方式を作る**
+                - (x + 半分)² - (半分)²
+                
+                **例：x² + 6x の場合**
+                1. xの係数：6
+                2. その半分：6 ÷ 2 = 3
+                3. 足して引く：x² + 6x + 9 - 9
+                4. 完成：(x + 3)² - 9
+                
+                💡 **覚え方**: 「半分の2乗を足して引く」！
+                """)
+        
+        
         # 正解計算
         correct_a, correct_h, correct_k = calculate_completion(a, b, c)
         correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
