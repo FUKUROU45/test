@@ -1,4 +1,9 @@
-import streamlit as st
+else:
+                # 既に回答済みの場合は結果を表示
+                result_key = f"result_{st.session_state.current_problem}"
+                if result_key in st.session_state:
+                    if st.session_state[result_key] == "correct":
+     import streamlit as st
 import random
 import math
 import time
@@ -108,18 +113,132 @@ def normalize_answer(answer):
         return ""
     
     # スペースを削除
-    normalized = answer.replace(" ", "")
+    normalized = answer.replace(" ", "").replace("\t", "")
     
     # 様々な2乗の表記をx^2に統一
     normalized = normalized.replace("²", "^2")
     normalized = normalized.replace("**2", "^2")
-    normalized = normalized.replace("x2", "x^2")  # x2 → x^2
-    normalized = normalized.replace("X", "x")     # 大文字を小文字に
+    
+    # 大文字を小文字に
+    normalized = normalized.replace("X", "x")
     
     # 括弧の正規化
     normalized = normalized.replace("（", "(").replace("）", ")")
     
+    # 分数の正規化 (1/2 → 1/2, 0.5 → 1/2)
+    import re
+    # 小数を分数に変換
+    decimal_matches = re.findall(r'\d*\.\d+', normalized)
+    for decimal in decimal_matches:
+        try:
+            frac = Fraction(float(decimal)).limit_denominator()
+            if frac.denominator == 1:
+                normalized = normalized.replace(decimal, str(frac.numerator))
+            else:
+                normalized = normalized.replace(decimal, f"{frac.numerator}/{frac.denominator}")
+        except:
+            pass
+    
     return normalized.lower()
+
+def parse_quadratic_completion(expression):
+    """平方完成の式を解析してa, h, kの値を抽出"""
+    try:
+        # 正規化
+        expr = normalize_answer(expression)
+        
+        # パターン1: a(x+h)^2+k または a(x-h)^2+k
+        import re
+        
+        # 係数aを抽出（省略時は1）
+        if expr.startswith('('):
+            a = 1
+            rest = expr
+        elif expr.startswith('-'):
+            if expr[1:].startswith('('):
+                a = -1
+                rest = expr[1:]
+            else:
+                # -2(x...)のような場合
+                match = re.match(r'^(-?\d+(?:/\d+)?)', expr)
+                if match:
+                    a_str = match.group(1)
+                    a = float(Fraction(a_str))
+                    rest = expr[len(a_str):]
+                else:
+                    a = -1
+                    rest = expr[1:]
+        else:
+            match = re.match(r'^(\d+(?:/\d+)?)', expr)
+            if match:
+                a_str = match.group(1)
+                a = float(Fraction(a_str))
+                rest = expr[len(a_str):]
+            else:
+                a = 1
+                rest = expr
+        
+        # (x±h)^2の部分を解析
+        pattern = r'\(x([+-])(\d+(?:/\d+)?)\)\^2'
+        match = re.search(pattern, rest)
+        
+        if match:
+            sign = match.group(1)
+            h_str = match.group(2)
+            h = float(Fraction(h_str))
+            if sign == '+':
+                h = -h  # (x+h)^2 の場合、実際の頂点は x=-h
+            
+            # 定数項kを抽出
+            after_square = rest[match.end():]
+            if not after_square:
+                k = 0
+            else:
+                k_match = re.match(r'^([+-])(\d+(?:/\d+)?)', after_square)
+                if k_match:
+                    k_sign = k_match.group(1)
+                    k_str = k_match.group(2)
+                    k = float(Fraction(k_str))
+                    if k_sign == '-':
+                        k = -k
+                else:
+                    k = 0
+        else:
+            # x^2のみの場合
+            if 'x^2' in rest and '(' not in rest:
+                h = 0
+                # 定数項を探す
+                k_match = re.search(r'x\^2([+-])(\d+(?:/\d+)?)', rest)
+                if k_match:
+                    k_sign = k_match.group(1)
+                    k_str = k_match.group(2)
+                    k = float(Fraction(k_str))
+                    if k_sign == '-':
+                        k = -k
+                else:
+                    k = 0
+            else:
+                return None
+        
+        return float(a), float(h), float(k)
+    
+    except Exception as e:
+        return None
+
+def is_equivalent_completion(user_answer, correct_a, correct_h, correct_k):
+    """平方完成の答えが等価かどうかを判定"""
+    user_parsed = parse_quadratic_completion(user_answer)
+    if user_parsed is None:
+        return False
+    
+    user_a, user_h, user_k = user_parsed
+    
+    # 小数点以下の誤差を考慮した比較
+    epsilon = 1e-10
+    
+    return (abs(user_a - correct_a) < epsilon and 
+            abs(user_h - correct_h) < epsilon and 
+            abs(user_k - correct_k) < epsilon)
 
 def explain_solution_simple(a, b, c):
     """わかりやすい解説を生成（x^2表記に統一）"""
@@ -361,11 +480,16 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         correct_a, correct_h, correct_k = calculate_completion(a, b, c)
         correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
         
+        # 詳細な正解表示
+        st.info(f"**正解:** {correct_answer}")
+        if st.session_state.level != "初級":
+            st.write(f"詳細: a={correct_a}, h={correct_h}, k={correct_k}")
+        
         # 回答入力
         user_answer = st.text_input(
             "答えを入力：",
             key=f"answer_{st.session_state.current_problem}",
-            help="例: (x - 2)^2 + 3, 2(x + 1/2)^2 - 1"
+            help="例: (x - 2)^2 + 3, 2(x + 1/2)^2 - 1, x^2 + 5"
         )
         
         col1, col2, col3 = st.columns(3)
@@ -377,17 +501,26 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
             if answered_key not in st.session_state:
                 if st.button("✅ 回答", type="primary"):
                     if user_answer.strip():
-                        # 答え合わせ（正規化関数を使用）
-                        user_normalized = normalize_answer(user_answer)
-                        correct_normalized = normalize_answer(correct_answer)
+                        # 改良された答え合わせ
+                        is_correct = is_equivalent_completion(user_answer, correct_a, correct_h, correct_k)
+                        
+                        # 詳細な判定結果を表示
+                        user_parsed = parse_quadratic_completion(user_answer)
+                        if user_parsed:
+                            user_a, user_h, user_k = user_parsed
+                            st.write(f"**あなたの答えの解析:** a={user_a}, h={user_h}, k={user_k}")
                         
                         # 正誤判定を保存
-                        if user_normalized == correct_normalized:
+                        if is_correct:
                             st.session_state[f"result_{st.session_state.current_problem}"] = "correct"
                             st.session_state.correct_answers += 1
+                            st.success("🎉 正解！")
                         else:
                             st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
                             st.session_state.wrong_problems.append((a, b, c, user_answer))
+                            st.error("❌ 不正解")
+                            if user_parsed is None:
+                                st.warning("⚠️ 入力形式を確認してください")
                         
                         # 回答済みフラグを設定
                         st.session_state[answered_key] = True
@@ -585,4 +718,3 @@ with st.sidebar:
     **^記号の入力:**
     - Shift + へ（ほ）キー
     """)
-    
