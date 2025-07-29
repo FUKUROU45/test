@@ -218,9 +218,17 @@ if not st.session_state.quiz_started:
     col1, col2 = st.columns(2)
     
     with col1:
+        # 前回選択したレベルがあれば初期値に設定
+        default_level_index = 0
+        if 'selected_level' in st.session_state:
+            level_options = ["初級", "中級", "上級"]
+            if st.session_state.selected_level in level_options:
+                default_level_index = level_options.index(st.session_state.selected_level)
+        
         level = st.selectbox(
             "難易度を選択：",
             ["初級", "中級", "上級"],
+            index=default_level_index,
             help="初級：x² + bx、中級：x² + bx + c、上級：ax² + bx + c"
         )
         
@@ -480,7 +488,7 @@ elif st.session_state.quiz_finished:
                 st.markdown(explanation)
     
     # 操作ボタン
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     
     with col1:
         if st.button("🏠 最初のページに戻る", type="primary"):
@@ -490,7 +498,20 @@ elif st.session_state.quiz_finished:
             st.rerun()
     
     with col2:
-        if st.button("🔄 同じ設定で再挑戦"):
+        if st.button("🔄 同じレベルで新しい設定"):
+            # レベルのみ保持して設定画面に戻る
+            level = st.session_state.level
+            
+            # セッション状態をリセット
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            
+            # レベルのみ復元
+            st.session_state.selected_level = level
+            st.rerun()
+    
+    with col3:
+        if st.button("⚡ 同じ設定で再挑戦"):
             # クイズ関連のみリセット（設定は保持）
             level = st.session_state.level
             problem_count = st.session_state.problem_count
