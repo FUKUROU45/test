@@ -589,4 +589,43 @@ elif st.session_state.quiz_finished:
                 st.write(f"**正解:** {correct_answer}")
                 
                 # 詳細解説
-                explanation
+                explanation = explain_solution_detailed(a, b, c)
+                st.markdown(explanation)
+                
+                # グラフ表示（有効な場合）
+                if st.session_state.show_graph:
+                    st.subheader("📊 グラフ")
+                    graph_data = create_simple_graph_data(a, b, c)
+                    
+                    import pandas as pd
+                    df = pd.DataFrame({'y': graph_data['y']}, index=graph_data['x'])
+                    st.line_chart(df)
+                    
+                    st.info(f"📍 頂点: ({graph_data['vertex_x']:.2f}, {graph_data['vertex_y']:.2f})")
+                    convexity = "下に凸（最小値）" if a > 0 else "上に凸（最大値）"
+                    st.info(f"📈 形状: {convexity}")
+    
+    # 再挑戦ボタン
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔄 もう一度挑戦", type="primary", use_container_width=True):
+            # セッション状態をリセット
+            st.session_state.quiz_started = False
+            st.session_state.current_problem = 0
+            st.session_state.correct_answers = 0
+            st.session_state.start_time = None
+            st.session_state.time_up = False
+            st.session_state.quiz_finished = False
+            st.session_state.problems = []
+            st.session_state.wrong_problems = []
+            st.session_state.selected_level = st.session_state.level  # レベルを記録
+            st.rerun()
+    
+    with col2:
+        if st.button("📝 新しいレベルに挑戦", type="secondary", use_container_width=True):
+            # 完全にリセット
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
