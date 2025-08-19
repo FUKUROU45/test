@@ -102,6 +102,41 @@ def format_completion_answer(a, h, k):
     
     return f"{a_str}{x_part}{k_part}"
 
+def generate_wrong_answers(correct_a, correct_h, correct_k, level):
+    """間違った選択肢を3つ生成"""
+    wrong_answers = []
+    
+    # パターン1: hの符号間違い
+    wrong_h1 = -correct_h if correct_h != 0 else 1
+    wrong1 = format_completion_answer(correct_a, wrong_h1, correct_k)
+    if wrong1 not in wrong_answers:
+        wrong_answers.append(wrong1)
+    
+    # パターン2: kの計算間違い（よくある間違い：(b/2)^2を引き忘れ）
+    if level == "初級":
+        wrong_k2 = 0  # 初級では定数項がないので0
+    else:
+        wrong_k2 = correct_k + (correct_h ** 2)  # (b/2)^2を足してしまう間違い
+    wrong2 = format_completion_answer(correct_a, correct_h, wrong_k2)
+    if wrong2 not in wrong_answers and len(wrong_answers) < 3:
+        wrong_answers.append(wrong2)
+    
+    # パターン3: hの値を2倍にしてしまう（b/2ではなくbを使う）
+    wrong_h3 = correct_h * 2 if correct_h != 0 else 2
+    wrong3 = format_completion_answer(correct_a, wrong_h3, correct_k)
+    if wrong3 not in wrong_answers and len(wrong_answers) < 3:
+        wrong_answers.append(wrong3)
+    
+    # パターン4: 完全に違う値（ランダム）
+    while len(wrong_answers) < 3:
+        random_h = random.choice([-3, -2, -1, 1, 2, 3])
+        random_k = random.choice([-5, -3, -1, 1, 3, 5])
+        wrong_random = format_completion_answer(correct_a, random_h, random_k)
+        if wrong_random not in wrong_answers:
+            wrong_answers.append(wrong_random)
+    
+    return wrong_answers[:3]  # 3つだけ返す
+
 def create_simple_graph_data(a, b, c):
     """グラフデータを作成（Streamlitの標準チャート用）"""
     import math
@@ -195,13 +230,13 @@ def explain_solution_detailed(a, b, c):
     else:
         explanation += f"係数 a = {a_ans} < 0 なので、放物線は**上に凸**で、頂点が**最大値**になります。\n\n"
     
-    # 理解のポイント
-    explanation += f"### 💭 理解のポイント\n\n"
-    explanation += f"1. **「xの係数の半分」** が平方完成の基本です\n"
-    explanation += f"2. **「足して引く」** テクニックで完全平方式を作ります\n"
-    explanation += f"3. **定数項の計算** を慎重に行いましょう\n"
+    # よくある間違いを説明
+    explanation += f"### ⚠️ よくある間違い\n\n"
+    explanation += f"1. **符号の間違い**: (x - h)の形で、hの符号を間違える\n"
+    explanation += f"2. **係数の間違い**: xの係数の「半分」ではなく、そのまま使ってしまう\n"
+    explanation += f"3. **定数項の計算ミス**: (b/2)²を引くのを忘れる\n"
     if a != 1:
-        explanation += f"4. **係数のくくり出し** を最初に忘れずに！\n"
+        explanation += f"4. **くくり出しを忘れる**: 最初に係数aをくくり出すのを忘れる\n"
     
     return explanation
 
@@ -237,13 +272,13 @@ def get_achievement_badge(accuracy, time_finished, level):
 
 # Streamlit アプリのメイン部分
 st.set_page_config(
-    page_title="平方完成チャレンジ",
+    page_title="平方完成チャレンジ（四択版）",
     page_icon="⏰",
     layout="wide"
 )
 
-st.title("⏰ 平方完成 チャレンジ")
-st.markdown("**制限時間内に平方完成をマスターしよう！**")
+st.title("⏰ 平方完成 チャレンジ（四択版）")
+st.markdown("**制限時間内に平方完成をマスターしよう！選択式で簡単回答！**")
 
 # セッション状態の初期化
 if 'quiz_started' not in st.session_state:
@@ -264,6 +299,8 @@ if 'wrong_problems' not in st.session_state:
     st.session_state.wrong_problems = []
 if 'show_graph' not in st.session_state:
     st.session_state.show_graph = False
+if 'choices' not in st.session_state:
+    st.session_state.choices = []
 
 # 設定パネル
 if not st.session_state.quiz_started:
@@ -314,33 +351,49 @@ if not st.session_state.quiz_started:
         else:
             st.info("📘 ax^2 + bx + c の形（応用）\n係数のくくり出しが必要な応用問題")
     
-    # 練習モードの説明
+    # 四択形式の説明
     st.markdown("---")
-    st.subheader("🎯 モード説明")
+    st.subheader("🎯 四択形式の特徴")
     col1, col2 = st.columns(2)
     
     with col1:
         st.markdown("""
-        **🏃‍♂️ タイムアタックモード**
-        - 制限時間内に多くの問題を解く
-        - スピードと正確性を競う
-        - リアルタイムで進捗確認
+        **✨ 選択式のメリット**
+        - 🎯 素早い回答が可能
+        - 🤔 よくある間違いから学習
+        - 📱 タップ・クリックで簡単操作
+        - ⚡ スピード重視の学習
         """)
     
     with col2:
         st.markdown("""
-        **📊 学習サポート機能**
-        - 詳細なステップ解説
-        - グラフによる視覚的理解
-        - 間違った問題の復習機能
+        **🧠 学習効果**
+        - 🔍 間違いパターンを認識
+        - 💡 正解の見分け方を習得
+        - 📊 グラフとの関連も理解
+        - 🏃‍♂️ 反復練習で定着
         """)
     
     if st.button("🚀 クイズスタート！", type="primary", use_container_width=True):
-        # 問題を事前生成
+        # 問題と選択肢を事前生成
         st.session_state.problems = []
+        st.session_state.choices = []
+        
         for _ in range(problem_count):
             a, b, c = generate_problem(level)
             st.session_state.problems.append((a, b, c))
+            
+            # 正解と不正解の選択肢を生成
+            correct_a, correct_h, correct_k = calculate_completion(a, b, c)
+            correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+            wrong_answers = generate_wrong_answers(correct_a, correct_h, correct_k, level)
+            
+            # 4つの選択肢をシャッフル
+            all_choices = [correct_answer] + wrong_answers
+            random.shuffle(all_choices)
+            correct_index = all_choices.index(correct_answer)
+            
+            st.session_state.choices.append((all_choices, correct_index))
         
         st.session_state.quiz_started = True
         st.session_state.start_time = time.time()
@@ -440,192 +493,64 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 💡 **覚え方**: 「半分の2乗を足して引く」！
                 """)
         
-        # 正解計算
-        correct_a, correct_h, correct_k = calculate_completion(a, b, c)
-        correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+        # 選択肢を表示
+        choices, correct_index = st.session_state.choices[st.session_state.current_problem]
         
-        # 回答入力
-        user_answer = st.text_input(
-            "答えを入力：",
-            key=f"answer_{st.session_state.current_problem}",
-            help="例: (x - 2)^2 + 3, 2(x + 1/2)^2 - 1",
-            placeholder="ここに答えを入力してください..."
-        )
-        
-        col1, col2, col3 = st.columns(3)
+        st.markdown("### 🔘 答えを選んでください：")
         
         # 回答状態をチェック
         answered_key = f"answered_{st.session_state.current_problem}"
         
-        with col1:
-            if answered_key not in st.session_state:
-                if st.button("✅ 回答", type="primary"):
-                    if user_answer.strip():
-                        # 答え合わせ
-                        user_clean = user_answer.replace(" ", "").replace("²", "^2")
-                        correct_clean = correct_answer.replace(" ", "").replace("²", "^2")
-                        
-                        # 正誤判定を保存
-                        if user_clean.lower() == correct_clean.lower():
-                            st.session_state[f"result_{st.session_state.current_problem}"] = "correct"
-                            st.session_state.correct_answers += 1
-                        else:
-                            st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
-                            st.session_state.wrong_problems.append((a, b, c, user_answer))
-                        
-                        # 回答済みフラグを設定
-                        st.session_state[answered_key] = True
-                        st.rerun()
-                    else:
-                        st.warning("答えを入力してください")
-            else:
-                # 既に回答済みの場合は結果を表示
-                result_key = f"result_{st.session_state.current_problem}"
-                if result_key in st.session_state:
-                    if st.session_state[result_key] == "correct":
-                        st.success("🎉 正解！")
-                    else:
-                        st.error(f"❌ 不正解")
-                        st.info(f"正解: **{correct_answer}**")
-        
-        with col2:
-            # 解説表示ボタン
-            explanation_key = f"show_explanation_{st.session_state.current_problem}"
-            if explanation_key not in st.session_state:
-                st.session_state[explanation_key] = False
+        if answered_key not in st.session_state:
+            # まだ回答していない場合
+            selected_option = st.radio(
+                "",
+                options=range(len(choices)),
+                format_func=lambda x: f"**{chr(65+x)}.** {choices[x]}",
+                key=f"choice_{st.session_state.current_problem}"
+            )
             
-            if st.button("📖 解説を見る", type="secondary"):
-                st.session_state[explanation_key] = not st.session_state[explanation_key]
-                st.rerun()
-        
-        with col3:
-            # 回答後は「次の問題へ」ボタンを表示
-            if answered_key in st.session_state and st.session_state[answered_key]:
-                if st.button("➡️ 次の問題へ", type="primary"):
-                    # 次の問題へ
+            col1, col2 = st.columns([1, 3])
+            
+            with col1:
+                if st.button("✅ 回答", type="primary", use_container_width=True):
+                    # 答え合わせ
+                    if selected_option == correct_index:
+                        st.session_state[f"result_{st.session_state.current_problem}"] = "correct"
+                        st.session_state.correct_answers += 1
+                    else:
+                        st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
+                        st.session_state.wrong_problems.append((a, b, c, choices[selected_option], selected_option))
+                    
+                    # 選択した答えを保存
+                    st.session_state[f"selected_{st.session_state.current_problem}"] = selected_option
+                    # 回答済みフラグを設定
+                    st.session_state[answered_key] = True
+                    st.rerun()
+            
+            with col2:
+                if st.button("⏭️ スキップ", type="secondary"):
+                    st.session_state.wrong_problems.append((a, b, c, "スキップ", -1))
                     st.session_state.current_problem += 1
                     
                     if st.session_state.current_problem >= st.session_state.problem_count:
                         st.session_state.quiz_finished = True
                     
                     st.rerun()
-            else:
-                if st.button("⏭️ スキップ"):
-                    st.session_state.wrong_problems.append((a, b, c, "スキップ"))
-                    st.session_state.current_problem += 1
-                    
-                    if st.session_state.current_problem >= st.session_state.problem_count:
-                        st.session_state.quiz_finished = True
-                    
-                    st.rerun()
         
-        # 解説表示
-        explanation_key = f"show_explanation_{st.session_state.current_problem}"
-        if explanation_key in st.session_state and st.session_state[explanation_key]:
-            st.markdown("---")
-            with st.container():
-                explanation = explain_solution_detailed(a, b, c)
-                st.markdown(explanation)
-            st.markdown("---")
-
-# 結果表示
-elif st.session_state.quiz_finished:
-    st.header("🎊 クイズ終了！")
-    
-    # 結果サマリー
-    accuracy = (st.session_state.correct_answers / st.session_state.problem_count) * 100
-    
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        st.metric("正解数", f"{st.session_state.correct_answers}/{st.session_state.problem_count}")
-    
-    with col2:
-        st.metric("正答率", f"{accuracy:.1f}%")
-    
-    with col3:
-        if st.session_state.time_up:
-            st.metric("結果", "⏰ 時間切れ")
-            finish_time = None
         else:
-            elapsed = time.time() - st.session_state.start_time
-            minutes = int(elapsed // 60)
-            seconds = int(elapsed % 60)
-            st.metric("完了時間", f"{minutes:02d}:{seconds:02d}")
-            finish_time = elapsed
-    
-    with col4:
-        st.metric("レベル", st.session_state.level)
-    
-    # バッジ表示
-    badges = get_achievement_badge(accuracy, finish_time, st.session_state.level)
-    if badges:
-        st.subheader("🏅 獲得バッジ")
-        badge_cols = st.columns(len(badges))
-        for i, badge in enumerate(badges):
-            with badge_cols[i]:
-                st.info(badge)
-    
-    # 評価コメント
-    if accuracy >= 90:
-        st.success("🏆 素晴らしい！平方完成を完全にマスターしていますね！")
-    elif accuracy >= 70:
-        st.info("👍 良い調子です！もう少し練習すれば完璧です！")
-    elif accuracy >= 50:
-        st.warning("📚 基礎は理解できています。解説を読んで復習しましょう！")
-    else:
-        st.error("💪 諦めずに！解説をしっかり読んで再挑戦しましょう！")
-    
-    # 間違った問題の解説
-    if st.session_state.wrong_problems:
-        st.header("📖 復習：間違った問題の解説")
-        
-        for i, (a, b, c, user_ans) in enumerate(st.session_state.wrong_problems):
-            with st.expander(f"問題 {i+1}：{format_quadratic(a, b, c)}", expanded=False):
-                st.write(f"**あなたの答え:** {user_ans}")
-                
-                correct_a, correct_h, correct_k = calculate_completion(a, b, c)
-                correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
-                st.write(f"**正解:** {correct_answer}")
-                
-                # 詳細解説
-                explanation = explain_solution_detailed(a, b, c)
-                st.markdown(explanation)
-                
-                # グラフ表示（有効な場合）
-                if st.session_state.show_graph:
-                    st.subheader("📊 グラフ")
-                    graph_data = create_simple_graph_data(a, b, c)
-                    
-                    import pandas as pd
-                    df = pd.DataFrame({'y': graph_data['y']}, index=graph_data['x'])
-                    st.line_chart(df)
-                    
-                    st.info(f"📍 頂点: ({graph_data['vertex_x']:.2f}, {graph_data['vertex_y']:.2f})")
-                    convexity = "下に凸（最小値）" if a > 0 else "上に凸（最大値）"
-                    st.info(f"📈 形状: {convexity}")
-    
-    # 再挑戦ボタン
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🔄 もう一度挑戦", type="primary", use_container_width=True):
-            # セッション状態をリセット
-            st.session_state.quiz_started = False
-            st.session_state.current_problem = 0
-            st.session_state.correct_answers = 0
-            st.session_state.start_time = None
-            st.session_state.time_up = False
-            st.session_state.quiz_finished = False
-            st.session_state.problems = []
-            st.session_state.wrong_problems = []
-            st.session_state.selected_level = st.session_state.level  # レベルを記録
-            st.rerun()
-    
-    with col2:
-        if st.button("📝 新しいレベルに挑戦", type="secondary", use_container_width=True):
-            # 完全にリセット
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+            # 既に回答済みの場合は結果を表示
+            selected_option = st.session_state[f"selected_{st.session_state.current_problem}"]
+            result_key = f"result_{st.session_state.current_problem}"
+            
+            # 選択肢を結果付きで表示
+            for i, choice in enumerate(choices):
+                if i == correct_index:
+                    if i == selected_option:
+                        st.success(f"✅ **{chr(65+i)}.** {choice} ← あなたの選択（正解！）")
+                    else:
+                        st.success(f"🎯 **{chr(65+i)}.** {choice} ← 正解")
+                elif i == selected_option:
+                    st.error(f"❌ **{chr(65+i)}.** {choice} ← あなたの選択（不正解）")
+                else:
+                    st.write(f"**{chr(65+i)}.** {choice}")
