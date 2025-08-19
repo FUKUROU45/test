@@ -3,8 +3,6 @@ import random
 import math
 import time
 from fractions import Fraction
-import matplotlib.pyplot as plt
-import numpy as np
 
 def generate_problem(level):
     """レベルに応じて問題を生成"""
@@ -104,33 +102,31 @@ def format_completion_answer(a, h, k):
     
     return f"{a_str}{x_part}{k_part}"
 
-def create_graph(a, b, c):
-    """二次関数のグラフを作成"""
-    x = np.linspace(-10, 10, 400)
-    y = a * x**2 + b * x + c
+def create_simple_graph_data(a, b, c):
+    """グラフデータを作成（Streamlitの標準チャート用）"""
+    import math
     
-    # 頂点を計算
+    # x値の範囲を決定
     vertex_x = -b / (2 * a)
-    vertex_y = a * vertex_x**2 + b * vertex_x + c
+    x_min = vertex_x - 5
+    x_max = vertex_x + 5
     
-    fig, ax = plt.subplots(figsize=(8, 6))
-    ax.plot(x, y, 'b-', linewidth=2, label=f'y = {format_quadratic(a, b, c)}')
-    ax.plot(vertex_x, vertex_y, 'ro', markersize=8, label=f'頂点({vertex_x:.2f}, {vertex_y:.2f})')
-    ax.grid(True, alpha=0.3)
-    ax.axhline(y=0, color='k', linewidth=0.5)
-    ax.axvline(x=0, color='k', linewidth=0.5)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_title(f'y = {format_quadratic(a, b, c)} のグラフ')
-    ax.legend()
+    # データポイント生成
+    x_values = []
+    y_values = []
     
-    # y軸の範囲を調整
-    y_min, y_max = min(y), max(y)
-    y_range = y_max - y_min
-    ax.set_ylim(y_min - y_range * 0.1, y_max + y_range * 0.1)
+    for i in range(50):
+        x = x_min + (x_max - x_min) * i / 49
+        y = a * x**2 + b * x + c
+        x_values.append(x)
+        y_values.append(y)
     
-    plt.tight_layout()
-    return fig
+    return {
+        'x': x_values,
+        'y': y_values,
+        'vertex_x': vertex_x,
+        'vertex_y': a * vertex_x**2 + b * vertex_x + c
+    }
 
 def explain_solution_detailed(a, b, c):
     """詳しい解説を生成（改良版）"""
@@ -299,7 +295,7 @@ if not st.session_state.quiz_started:
         show_graph = st.checkbox(
             "グラフ表示機能を有効にする",
             value=False,
-            help="問題のグラフを表示してより視覚的に学習できます"
+            help="問題のグラフを表示してより視覚的に学習できます（簡易版）"
         )
     
     with col2:
@@ -404,9 +400,18 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         # グラフ表示（有効な場合）
         if st.session_state.show_graph:
             with st.expander("📊 グラフを見る", expanded=False):
-                fig = create_graph(a, b, c)
-                st.pyplot(fig)
-                plt.close(fig)
+                graph_data = create_simple_graph_data(a, b, c)
+                
+                # Streamlit標準のline_chartを使用
+                import pandas as pd
+                df = pd.DataFrame({'y': graph_data['y']}, index=graph_data['x'])
+                st.line_chart(df)
+                
+                # 頂点情報を表示
+                st.info(f"📍 頂点: ({graph_data['vertex_x']:.2f}, {graph_data['vertex_y']:.2f})")
+                
+                convexity = "下に凸（最小値）" if a > 0 else "上に凸（最大値）"
+                st.info(f"📈 形状: {convexity}")
         
         # 初級レベルのみ「やり方」を表示
         if st.session_state.level == "初級":
@@ -584,37 +589,4 @@ elif st.session_state.quiz_finished:
                 st.write(f"**正解:** {correct_answer}")
                 
                 # 詳細解説
-                explanation = explain_solution_detailed(a, b, c)
-                st.markdown(explanation)
-                
-                # グラフ表示（有効な場合）
-                if st.session_state.show_graph:
-                    st.subheader("📊 グラフ")
-                    fig = create_graph(a, b, c)
-                    st.pyplot(fig)
-                    plt.close(fig)
-    
-    # 再挑戦ボタン
-    st.markdown("---")
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.button("🔄 もう一度挑戦", type="primary", use_container_width=True):
-            # セッション状態をリセット
-            st.session_state.quiz_started = False
-            st.session_state.current_problem = 0
-            st.session_state.correct_answers = 0
-            st.session_state.start_time = None
-            st.session_state.time_up = False
-            st.session_state.quiz_finished = False
-            st.session_state.problems = []
-            st.session_state.wrong_problems = []
-            st.session_state.selected_level = st.session_state.level  # レベルを記録
-            st.rerun()
-    
-    with col2:
-        if st.button("📝 新しいレベルに挑戦", type="secondary", use_container_width=True):
-            # 完全にリセット
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
+                explanation
