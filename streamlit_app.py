@@ -576,4 +576,4 @@ elif st.session_state.quiz_finished:
         st.header("📖 復習：間違った問題の解説")
         
         for i, (a, b, c, user_ans) in enumerate(st.session_state.wrong_problems):
-            with st.expander(f"問題 {i+
+            with st.expander(f"問題 {i+1}：{format_qua
