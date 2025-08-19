@@ -576,4 +576,45 @@ elif st.session_state.quiz_finished:
         st.header("📖 復習：間違った問題の解説")
         
         for i, (a, b, c, user_ans) in enumerate(st.session_state.wrong_problems):
-            with st.expander(f"問題 {i+1}：{format_qua
+            with st.expander(f"問題 {i+1}：{format_quadratic(a, b, c)}", expanded=False):
+                st.write(f"**あなたの答え:** {user_ans}")
+                
+                correct_a, correct_h, correct_k = calculate_completion(a, b, c)
+                correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+                st.write(f"**正解:** {correct_answer}")
+                
+                # 詳細解説
+                explanation = explain_solution_detailed(a, b, c)
+                st.markdown(explanation)
+                
+                # グラフ表示（有効な場合）
+                if st.session_state.show_graph:
+                    st.subheader("📊 グラフ")
+                    fig = create_graph(a, b, c)
+                    st.pyplot(fig)
+                    plt.close(fig)
+    
+    # 再挑戦ボタン
+    st.markdown("---")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        if st.button("🔄 もう一度挑戦", type="primary", use_container_width=True):
+            # セッション状態をリセット
+            st.session_state.quiz_started = False
+            st.session_state.current_problem = 0
+            st.session_state.correct_answers = 0
+            st.session_state.start_time = None
+            st.session_state.time_up = False
+            st.session_state.quiz_finished = False
+            st.session_state.problems = []
+            st.session_state.wrong_problems = []
+            st.session_state.selected_level = st.session_state.level  # レベルを記録
+            st.rerun()
+    
+    with col2:
+        if st.button("📝 新しいレベルに挑戦", type="secondary", use_container_width=True):
+            # 完全にリセット
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.rerun()
