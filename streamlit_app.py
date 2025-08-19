@@ -3,6 +3,8 @@ import random
 import math
 import time
 from fractions import Fraction
+import matplotlib.pyplot as plt
+import numpy as np
 
 def generate_problem(level):
     """レベルに応じて問題を生成"""
@@ -102,9 +104,37 @@ def format_completion_answer(a, h, k):
     
     return f"{a_str}{x_part}{k_part}"
 
-def explain_solution_simple(a, b, c):
-    """わかりやすい解説を生成"""
-    explanation = "## 🔍 詳しい解説\n\n"
+def create_graph(a, b, c):
+    """二次関数のグラフを作成"""
+    x = np.linspace(-10, 10, 400)
+    y = a * x**2 + b * x + c
+    
+    # 頂点を計算
+    vertex_x = -b / (2 * a)
+    vertex_y = a * vertex_x**2 + b * vertex_x + c
+    
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.plot(x, y, 'b-', linewidth=2, label=f'y = {format_quadratic(a, b, c)}')
+    ax.plot(vertex_x, vertex_y, 'ro', markersize=8, label=f'頂点({vertex_x:.2f}, {vertex_y:.2f})')
+    ax.grid(True, alpha=0.3)
+    ax.axhline(y=0, color='k', linewidth=0.5)
+    ax.axvline(x=0, color='k', linewidth=0.5)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_title(f'y = {format_quadratic(a, b, c)} のグラフ')
+    ax.legend()
+    
+    # y軸の範囲を調整
+    y_min, y_max = min(y), max(y)
+    y_range = y_max - y_min
+    ax.set_ylim(y_min - y_range * 0.1, y_max + y_range * 0.1)
+    
+    plt.tight_layout()
+    return fig
+
+def explain_solution_detailed(a, b, c):
+    """詳しい解説を生成（改良版）"""
+    explanation = "## 🔍 ステップバイステップ解説\n\n"
     
     # 元の式
     original = format_quadratic(a, b, c)
@@ -161,23 +191,13 @@ def explain_solution_simple(a, b, c):
     explanation += f"### 🎯 **最終答え**\n"
     explanation += f"```\n{final_answer}\n```\n\n"
     
-    # 検算
-    explanation += f"### ✅ 検算してみよう！\n\n"
-    if a == 1:
-        if h_ans == 0:
-            expanded = f"x² + {int(k_ans)}" if k_ans != 0 else "x²"
-        else:
-            h_frac = Fraction(h_ans).limit_denominator()
-            if h_frac > 0:
-                expanded = f"x² + {2*h_frac}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
-            else:
-                expanded = f"x² - {abs(2*h_frac)}x + {Fraction(h_frac**2 + k_ans).limit_denominator()}"
+    # 頂点の説明を追加
+    explanation += f"### 📍 頂点について\n\n"
+    explanation += f"この二次関数の頂点は `({Fraction(h_ans).limit_denominator()}, {Fraction(k_ans).limit_denominator()})` です。\n\n"
+    if a_ans > 0:
+        explanation += f"係数 a = {a_ans} > 0 なので、放物線は**下に凸**で、頂点が**最小値**になります。\n\n"
     else:
-        # 上級の検算は簡略化
-        expanded = f"展開すると元の式 {original} に戻ります"
-    
-    explanation += f"**{final_answer}** を展開すると...\n"
-    explanation += f"→ **{expanded}** ✓\n\n"
+        explanation += f"係数 a = {a_ans} < 0 なので、放物線は**上に凸**で、頂点が**最大値**になります。\n\n"
     
     # 理解のポイント
     explanation += f"### 💭 理解のポイント\n\n"
@@ -189,9 +209,45 @@ def explain_solution_simple(a, b, c):
     
     return explanation
 
+def get_achievement_badge(accuracy, time_finished, level):
+    """成績に応じてバッジを返す"""
+    badges = []
+    
+    # 正答率バッジ
+    if accuracy >= 95:
+        badges.append("🏆 パーフェクトマスター")
+    elif accuracy >= 85:
+        badges.append("🥇 ゴールドメダル")
+    elif accuracy >= 70:
+        badges.append("🥈 シルバーメダル")
+    elif accuracy >= 50:
+        badges.append("🥉 ブロンズメダル")
+    
+    # スピードバッジ
+    if time_finished and time_finished < 60:
+        badges.append("⚡ スピードマスター")
+    elif time_finished and time_finished < 120:
+        badges.append("🚀 高速解答")
+    
+    # レベル別バッジ
+    if level == "上級" and accuracy >= 80:
+        badges.append("👑 上級マスター")
+    elif level == "中級" and accuracy >= 85:
+        badges.append("🎖️ 中級エキスパート")
+    elif level == "初級" and accuracy >= 90:
+        badges.append("🌟 初級チャンピオン")
+    
+    return badges
+
 # Streamlit アプリのメイン部分
+st.set_page_config(
+    page_title="平方完成チャレンジ",
+    page_icon="⏰",
+    layout="wide"
+)
+
 st.title("⏰ 平方完成 チャレンジ")
-st.write("制限時間内に平方完成をマスターしよう！")
+st.markdown("**制限時間内に平方完成をマスターしよう！**")
 
 # セッション状態の初期化
 if 'quiz_started' not in st.session_state:
@@ -210,6 +266,8 @@ if 'problems' not in st.session_state:
     st.session_state.problems = []
 if 'wrong_problems' not in st.session_state:
     st.session_state.wrong_problems = []
+if 'show_graph' not in st.session_state:
+    st.session_state.show_graph = False
 
 # 設定パネル
 if not st.session_state.quiz_started:
@@ -237,24 +295,51 @@ if not st.session_state.quiz_started:
             [5, 10, 15, 20],
             index=1
         )
+        
+        show_graph = st.checkbox(
+            "グラフ表示機能を有効にする",
+            value=False,
+            help="問題のグラフを表示してより視覚的に学習できます"
+        )
     
     with col2:
         time_limit = st.selectbox(
             "制限時間を選択：",
-            [60, 120, 180, 300],  # 秒
+            [60, 120, 180, 300, 600],  # 10分まで追加
             format_func=lambda x: f"{x//60}分" if x >= 60 else f"{x}秒",
             index=1  # デフォルト2分
         )
         
         st.write("**レベル説明：**")
         if level == "初級":
-            st.info("x² + bx の形（基礎）")
+            st.info("📚 x² + bx の形（基礎）\n平方完成の基本を学びます")
         elif level == "中級":
-            st.info("x² + bx + c の形（標準）")
+            st.info("📖 x² + bx + c の形（標準）\n定数項がある標準的な問題")
         else:
-            st.info("ax² + bx + c の形（応用）")
+            st.info("📘 ax² + bx + c の形（応用）\n係数のくくり出しが必要な応用問題")
     
-    if st.button("🚀 クイズスタート！", type="primary"):
+    # 練習モードの説明
+    st.markdown("---")
+    st.subheader("🎯 モード説明")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.markdown("""
+        **🏃‍♂️ タイムアタックモード**
+        - 制限時間内に多くの問題を解く
+        - スピードと正確性を競う
+        - リアルタイムで進捗確認
+        """)
+    
+    with col2:
+        st.markdown("""
+        **📊 学習サポート機能**
+        - 詳細なステップ解説
+        - グラフによる視覚的理解
+        - 間違った問題の復習機能
+        """)
+    
+    if st.button("🚀 クイズスタート！", type="primary", use_container_width=True):
         # 問題を事前生成
         st.session_state.problems = []
         for _ in range(problem_count):
@@ -271,6 +356,7 @@ if not st.session_state.quiz_started:
         st.session_state.level = level
         st.session_state.problem_count = problem_count
         st.session_state.time_limit = time_limit
+        st.session_state.show_graph = show_graph
         st.rerun()
 
 # クイズ実行中
@@ -285,7 +371,7 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         st.rerun()
     
     # 上部に進捗とタイマー表示
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         progress = st.session_state.current_problem / st.session_state.problem_count
@@ -296,6 +382,10 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         st.metric("正解数", st.session_state.correct_answers)
     
     with col3:
+        accuracy = (st.session_state.correct_answers / max(1, st.session_state.current_problem)) * 100
+        st.metric("正答率", f"{accuracy:.1f}%")
+    
+    with col4:
         minutes = int(remaining_time // 60)
         seconds = int(remaining_time % 60)
         time_color = "🔴" if remaining_time < 30 else "🟡" if remaining_time < 60 else "🟢"
@@ -310,6 +400,13 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         
         st.write("次の二次式を平方完成してください：")
         st.markdown(f"### 📝 {problem_text}")
+        
+        # グラフ表示（有効な場合）
+        if st.session_state.show_graph:
+            with st.expander("📊 グラフを見る", expanded=False):
+                fig = create_graph(a, b, c)
+                st.pyplot(fig)
+                plt.close(fig)
         
         # 初級レベルのみ「やり方」を表示
         if st.session_state.level == "初級":
@@ -338,7 +435,6 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 💡 **覚え方**: 「半分の2乗を足して引く」！
                 """)
         
-        
         # 正解計算
         correct_a, correct_h, correct_k = calculate_completion(a, b, c)
         correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
@@ -347,7 +443,8 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         user_answer = st.text_input(
             "答えを入力：",
             key=f"answer_{st.session_state.current_problem}",
-            help="例: (x - 2)² + 3, 2(x + 1/2)² - 1"
+            help="例: (x - 2)² + 3, 2(x + 1/2)² - 1",
+            placeholder="ここに答えを入力してください..."
         )
         
         col1, col2, col3 = st.columns(3)
@@ -383,40 +480,30 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                     if st.session_state[result_key] == "correct":
                         st.success("🎉 正解！")
                     else:
-                        st.error(f"❌ 不正解　正解: {correct_answer}")
-                
-                # 解説表示ボタン
-                explanation_key = f"show_explanation_{st.session_state.current_problem}"
-                if explanation_key not in st.session_state:
-                    if st.button("📖 解説を見る", type="secondary"):
-                        st.session_state[explanation_key] = True
-                        st.rerun()
-                else:
-                    st.write("📖 解説表示中")
+                        st.error(f"❌ 不正解")
+                        st.info(f"正解: **{correct_answer}**")
         
         with col2:
-            # 手動で解説を表示するボタン（回答前でも使用可能）
-            if answered_key not in st.session_state:
-                if st.button("📖 解説を見る"):
-                    explanation_key = f"show_explanation_{st.session_state.current_problem}"
-                    if explanation_key not in st.session_state:
-                        st.session_state[explanation_key] = False
-                    st.session_state[explanation_key] = not st.session_state[explanation_key]
-                    st.rerun()
+            # 解説表示ボタン
+            explanation_key = f"show_explanation_{st.session_state.current_problem}"
+            if explanation_key not in st.session_state:
+                st.session_state[explanation_key] = False
+            
+            if st.button("📖 解説を見る", type="secondary"):
+                st.session_state[explanation_key] = not st.session_state[explanation_key]
+                st.rerun()
         
         with col3:
             # 回答後は「次の問題へ」ボタンを表示
             if answered_key in st.session_state and st.session_state[answered_key]:
-                explanation_key = f"show_explanation_{st.session_state.current_problem}"
-                if explanation_key in st.session_state:
-                    if st.button("➡️ 次の問題へ", type="primary"):
-                        # 次の問題へ
-                        st.session_state.current_problem += 1
-                        
-                        if st.session_state.current_problem >= st.session_state.problem_count:
-                            st.session_state.quiz_finished = True
-                        
-                        st.rerun()
+                if st.button("➡️ 次の問題へ", type="primary"):
+                    # 次の問題へ
+                    st.session_state.current_problem += 1
+                    
+                    if st.session_state.current_problem >= st.session_state.problem_count:
+                        st.session_state.quiz_finished = True
+                    
+                    st.rerun()
             else:
                 if st.button("⏭️ スキップ"):
                     st.session_state.wrong_problems.append((a, b, c, "スキップ"))
@@ -432,7 +519,7 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         if explanation_key in st.session_state and st.session_state[explanation_key]:
             st.markdown("---")
             with st.container():
-                explanation = explain_solution_simple(a, b, c)
+                explanation = explain_solution_detailed(a, b, c)
                 st.markdown(explanation)
             st.markdown("---")
 
@@ -443,7 +530,7 @@ elif st.session_state.quiz_finished:
     # 結果サマリー
     accuracy = (st.session_state.correct_answers / st.session_state.problem_count) * 100
     
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         st.metric("正解数", f"{st.session_state.correct_answers}/{st.session_state.problem_count}")
@@ -454,15 +541,29 @@ elif st.session_state.quiz_finished:
     with col3:
         if st.session_state.time_up:
             st.metric("結果", "⏰ 時間切れ")
+            finish_time = None
         else:
             elapsed = time.time() - st.session_state.start_time
             minutes = int(elapsed // 60)
             seconds = int(elapsed % 60)
             st.metric("完了時間", f"{minutes:02d}:{seconds:02d}")
+            finish_time = elapsed
+    
+    with col4:
+        st.metric("レベル", st.session_state.level)
+    
+    # バッジ表示
+    badges = get_achievement_badge(accuracy, finish_time, st.session_state.level)
+    if badges:
+        st.subheader("🏅 獲得バッジ")
+        badge_cols = st.columns(len(badges))
+        for i, badge in enumerate(badges):
+            with badge_cols[i]:
+                st.info(badge)
     
     # 評価コメント
     if accuracy >= 90:
-        st.success("🏆 素晴らしい！平方完成をマスターしていますね！")
+        st.success("🏆 素晴らしい！平方完成を完全にマスターしていますね！")
     elif accuracy >= 70:
         st.info("👍 良い調子です！もう少し練習すれば完璧です！")
     elif accuracy >= 50:
@@ -472,98 +573,7 @@ elif st.session_state.quiz_finished:
     
     # 間違った問題の解説
     if st.session_state.wrong_problems:
-        st.header("📖 間違った問題の解説")
+        st.header("📖 復習：間違った問題の解説")
         
         for i, (a, b, c, user_ans) in enumerate(st.session_state.wrong_problems):
-            with st.expander(f"問題 {i+1}: {format_quadratic(a, b, c)}", expanded=False):
-                if user_ans != "スキップ":
-                    st.write(f"**あなたの答え:** {user_ans}")
-                
-                correct_a, correct_h, correct_k = calculate_completion(a, b, c)
-                correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
-                st.write(f"**正しい答え:** {correct_answer}")
-                
-                # 詳しい解説
-                explanation = explain_solution_simple(a, b, c)
-                st.markdown(explanation)
-    
-    # 操作ボタン
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("🏠 最初のページに戻る", type="primary"):
-            # セッション状態を完全リセット
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-    
-    with col2:
-        if st.button("🔄 同じレベルで新しい設定"):
-            # レベルのみ保持して設定画面に戻る
-            level = st.session_state.level
-            
-            # セッション状態をリセット
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            
-            # レベルのみ復元
-            st.session_state.selected_level = level
-            st.rerun()
-    
-    with col3:
-        if st.button("⚡ 同じ設定で再挑戦"):
-            # クイズ関連のみリセット（設定は保持）
-            level = st.session_state.level
-            problem_count = st.session_state.problem_count
-            time_limit = st.session_state.time_limit
-            
-            # 問題を新たに生成
-            problems = []
-            for _ in range(problem_count):
-                a, b, c = generate_problem(level)
-                problems.append((a, b, c))
-            
-            # 必要な状態のみリセット
-            st.session_state.problems = problems
-            st.session_state.current_problem = 0
-            st.session_state.correct_answers = 0
-            st.session_state.start_time = time.time()
-            st.session_state.time_up = False
-            st.session_state.quiz_finished = False
-            st.session_state.wrong_problems = []
-            
-            # 解説表示状態をリセット
-            for key in list(st.session_state.keys()):
-                if key.startswith(('show_explanation_', 'answered_', 'result_')):
-                    del st.session_state[key]
-            
-            st.rerun()
-
-# サイドバー：ヒント
-with st.sidebar:
-    st.header("💡 平方完成のコツ")
-    st.markdown("""
-    ### 🎯 基本手順
-    1. **xの係数の半分**を求める
-    2. **その値を2乗**して足し引きする
-    3. **完全平方式**を作る
-    4. **定数項**を整理する
-    
-    ### ✨ 覚え方
-    - 「**半分の2乗**を足して引く」
-    - 「**(x + 半分)²**の形を作る」
-    
-    ### 🔢 よくある間違い
-    - 符号の間違い（+ と - を逆にする）
-    - 分数の計算ミス
-    - 定数項の計算忘れ
-    """)
-    
-    if st.session_state.quiz_started and not st.session_state.quiz_finished:
-        st.header("⚡ クイック参考")
-        st.markdown("""
-        **入力例:**
-        - `(x + 2)² - 1`
-        - `2(x - 3)² + 5`
-        - `(x + 1/2)² - 1/4`
-        """)
+            with st.expander(f"問題 {i+
