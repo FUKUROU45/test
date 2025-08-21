@@ -57,27 +57,23 @@ def format_quadratic(a, b, c):
     return " ".join(terms) if terms else "0"
 
 def calculate_completion(a, b, c):
-    """平方完成の答えを計算（修正版）"""
-    # 平方完成: a(x + h)^2 + k の形に変換
-    # x^2の係数がaの場合、h = -b/(2a), k = c - b^2/(4a)
-    h = -b / (2 * a)
-    k = c - (b * b) / (4 * a)
-    return a, h, k
+    """平方完成の答えを計算"""
+    if a == 1:
+        h = -b / 2
+        k = c - (b**2) / 4
+        return 1, h, k
+    else:
+        h = -b / (2 * a)
+        k = c - (b**2) / (4 * a)
+        return a, h, k
 
 def format_completion_answer(a, h, k):
-    """平方完成の答えを文字列で表示（修正版）"""
+    """平方完成の答えを文字列で表示（x^2形式）"""
     h_frac = Fraction(h).limit_denominator()
     k_frac = Fraction(k).limit_denominator()
     
-    # a係数の表示
-    if a == 1:
-        a_str = ""
-    elif a == -1:
-        a_str = "-"
-    else:
-        a_str = str(a)
+    a_str = "" if a == 1 else f"{a}"
     
-    # (x ± h)^2 部分の表示
     if h_frac == 0:
         x_part = "x^2"
     elif h_frac > 0:
@@ -85,14 +81,12 @@ def format_completion_answer(a, h, k):
             x_part = f"(x + {h_frac.numerator})^2"
         else:
             x_part = f"(x + {h_frac})^2"
-    else:  # h < 0
-        h_abs = abs(h_frac)
-        if h_abs.denominator == 1:
-            x_part = f"(x - {h_abs.numerator})^2"
+    else:
+        if h_frac.denominator == 1:
+            x_part = f"(x - {abs(h_frac.numerator)})^2"
         else:
-            x_part = f"(x - {h_abs})^2"
+            x_part = f"(x - {abs(h_frac)})^2"
     
-    # k項の表示
     if k_frac == 0:
         k_part = ""
     elif k_frac > 0:
@@ -100,73 +94,48 @@ def format_completion_answer(a, h, k):
             k_part = f" + {k_frac.numerator}"
         else:
             k_part = f" + {k_frac}"
-    else:  # k < 0
-        k_abs = abs(k_frac)
-        if k_abs.denominator == 1:
-            k_part = f" - {k_abs.numerator}"
+    else:
+        if k_frac.denominator == 1:
+            k_part = f" - {abs(k_frac.numerator)}"
         else:
-            k_part = f" - {k_abs}"
+            k_part = f" - {abs(k_frac)}"
     
     return f"{a_str}{x_part}{k_part}"
 
 def generate_wrong_answers(correct_a, correct_h, correct_k, level):
-    """間違った選択肢を3つ生成（修正版）"""
+    """間違った選択肢を3つ生成"""
     wrong_answers = []
-    correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
     
     # パターン1: hの符号間違い
     wrong_h1 = -correct_h if correct_h != 0 else 1
     wrong1 = format_completion_answer(correct_a, wrong_h1, correct_k)
-    if wrong1 != correct_answer and wrong1 not in wrong_answers:
+    if wrong1 not in wrong_answers:
         wrong_answers.append(wrong1)
     
-    # パターン2: kの計算間違い（(b/2)^2を足してしまう）
-    wrong_k2 = correct_k + correct_h ** 2
+    # パターン2: kの計算間違い（よくある間違い：(b/2)^2を引き忘れ）
+    if level == "初級":
+        wrong_k2 = 0  # 初級では定数項がないので0
+    else:
+        wrong_k2 = correct_k + (correct_h ** 2)  # (b/2)^2を足してしまう間違い
     wrong2 = format_completion_answer(correct_a, correct_h, wrong_k2)
-    if wrong2 != correct_answer and wrong2 not in wrong_answers:
+    if wrong2 not in wrong_answers and len(wrong_answers) < 3:
         wrong_answers.append(wrong2)
     
-    # パターン3: h値を2倍にしてしまう間違い
+    # パターン3: hの値を2倍にしてしまう（b/2ではなくbを使う）
     wrong_h3 = correct_h * 2 if correct_h != 0 else 2
     wrong3 = format_completion_answer(correct_a, wrong_h3, correct_k)
-    if wrong3 != correct_answer and wrong3 not in wrong_answers:
+    if wrong3 not in wrong_answers and len(wrong_answers) < 3:
         wrong_answers.append(wrong3)
     
-    # パターン4以降: ランダムな間違い
-    attempt_count = 0
-    while len(wrong_answers) < 3 and attempt_count < 20:
-        if correct_h == 0:
-            random_h = random.choice([-3, -2, -1, 1, 2, 3])
-        else:
-            random_h = random.choice([correct_h + 1, correct_h - 1, -correct_h, correct_h * 2])
-        
-        if correct_k == 0:
-            random_k = random.choice([-5, -3, -1, 1, 3, 5])
-        else:
-            random_k = random.choice([correct_k + 1, correct_k - 1, -correct_k, 0])
-        
+    # パターン4: 完全に違う値（ランダム）
+    while len(wrong_answers) < 3:
+        random_h = random.choice([-3, -2, -1, 1, 2, 3])
+        random_k = random.choice([-5, -3, -1, 1, 3, 5])
         wrong_random = format_completion_answer(correct_a, random_h, random_k)
-        if wrong_random != correct_answer and wrong_random not in wrong_answers:
+        if wrong_random not in wrong_answers:
             wrong_answers.append(wrong_random)
-        
-        attempt_count += 1
     
-    # まだ足りない場合は簡単なパターンで埋める
-    simple_patterns = [
-        (correct_h + 1, correct_k),
-        (correct_h - 1, correct_k),
-        (correct_h, correct_k + 1),
-        (correct_h, correct_k - 1),
-    ]
-    
-    for h, k in simple_patterns:
-        if len(wrong_answers) >= 3:
-            break
-        wrong = format_completion_answer(correct_a, h, k)
-        if wrong != correct_answer and wrong not in wrong_answers:
-            wrong_answers.append(wrong)
-    
-    return wrong_answers[:3]
+    return wrong_answers[:3]  # 3つだけ返す
 
 def create_simple_graph_data(a, b, c):
     """グラフデータを作成（Streamlitの標準チャート用）"""
@@ -195,7 +164,7 @@ def create_simple_graph_data(a, b, c):
     }
 
 def explain_solution_detailed(a, b, c):
-    """詳しい解説を生成（修正版）"""
+    """詳しい解説を生成（改良版）"""
     explanation = "## 🔍 ステップバイステップ解説\n\n"
     
     # 元の式
@@ -207,61 +176,44 @@ def explain_solution_detailed(a, b, c):
         
         # ステップ1: aでくくる
         explanation += f"**Step 1️⃣: 最高次の係数 `{a}` でくくり出す**\n\n"
-        if c == 0:
-            explanation += f"```\n{original}\n= {a}(x^2 + {Fraction(b, a).limit_denominator()}x)\n```\n\n"
-        else:
-            explanation += f"```\n{original}\n= {a}(x^2 + {Fraction(b, a).limit_denominator()}x) + {c}\n```\n\n"
-        explanation += f"💡 **ポイント**: x^2とxの項から係数 {a} をくくり出します\n\n"
+        explanation += f"```\n{original}\n= {a}(x^2 + {Fraction(b, a)}x) + {c}\n```\n\n"
+        explanation += f"💡 **ポイント**: `{a}x^2` と `{b}x` から `{a}` をくくり出すと、括弧の中は `x^2` と `{Fraction(b, a)}x` になります\n\n"
         
         # ステップ2: 平方完成の準備
-        b_over_a = Fraction(b, a).limit_denominator()
-        half_coeff = Fraction(b, 2*a).limit_denominator()
+        half_coeff = Fraction(b, 2*a)
         explanation += f"**Step 2️⃣: 平方完成の準備**\n\n"
-        explanation += f"```\n括弧内のx係数: {b_over_a}\nその半分: {b_over_a} ÷ 2 = {half_coeff}\n```\n\n"
+        explanation += f"```\nx の係数: {Fraction(b, a)}\nその半分: {Fraction(b, a)} ÷ 2 = {half_coeff}\n```\n\n"
+        explanation += f"💡 **覚え方**: 平方完成では「xの係数の半分」を使います！\n\n"
         
         # ステップ3: 平方完成
-        half_squared = Fraction(b**2, 4*a**2).limit_denominator()
         explanation += f"**Step 3️⃣: 平方完成を実行**\n\n"
-        explanation += f"```\n{a}(x^2 + {b_over_a}x)\n"
-        explanation += f"= {a}(x^2 + {b_over_a}x + {half_squared} - {half_squared})\n"
-        explanation += f"= {a}((x + {half_coeff})^2 - {half_squared})\n"
-        explanation += f"= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a).limit_denominator()}\n```\n\n"
+        half_squared = Fraction(b**2, 4*a**2)
+        explanation += f"```\n{a}(x^2 + {Fraction(b, a)}x)\n= {a}(x^2 + {Fraction(b, a)}x + {half_squared} - {half_squared})\n= {a}((x + {half_coeff})^2 - {half_squared})\n= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a)}\n```\n\n"
         
         # ステップ4: 定数項の整理
-        if c != 0:
-            explanation += f"**Step 4️⃣: 定数項をまとめる**\n\n"
-            k_final = Fraction(4*a*c - b**2, 4*a).limit_denominator()
-            explanation += f"```\n= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a).limit_denominator()} + {c}\n"
-            explanation += f"= {a}(x + {half_coeff})^2 + {k_final}\n```\n\n"
+        explanation += f"**Step 4️⃣: 定数項をまとめる**\n\n"
+        k_final = Fraction(4*a*c - b**2, 4*a)
+        explanation += f"```\n= {a}(x + {half_coeff})^2 - {Fraction(b**2, 4*a)} + {c}\n= {a}(x + {half_coeff})^2 + {k_final}\n```\n\n"
         
     else:
         explanation += "### 📌 初級・中級レベルの解法（a = 1の場合）\n\n"
         
         # ステップ1: xの係数の半分
-        half_coeff = Fraction(b, 2).limit_denominator()
+        half_coeff = Fraction(b, 2)
         explanation += f"**Step 1️⃣: xの係数の半分を求める**\n\n"
         explanation += f"```\nx の係数: {b}\nその半分: {b} ÷ 2 = {half_coeff}\n```\n\n"
         explanation += f"💡 **重要**: この値 `{half_coeff}` が平方完成のカギです！\n\n"
         
         # ステップ2: 平方完成
-        half_squared = Fraction(b**2, 4).limit_denominator()
+        half_squared = Fraction(b**2, 4)
         explanation += f"**Step 2️⃣: 平方完成の魔法 ✨**\n\n"
-        explanation += f"```\n{original}\n"
-        explanation += f"= x^2 + {b}x + {half_squared} - {half_squared}"
-        if c != 0:
-            explanation += f" + {c}"
-        explanation += f"\n= (x + {half_coeff})^2 - {half_squared}"
-        if c != 0:
-            explanation += f" + {c}"
-        explanation += f"\n```\n\n"
+        explanation += f"```\n{original}\n= x^2 + {b}x + {half_squared} - {half_squared} + {c}\n= (x + {half_coeff})^2 - {half_squared} + {c}\n```\n\n"
         explanation += f"💡 **なぜこうなる？**: `(x + {half_coeff})^2` を展開すると `x^2 + {b}x + {half_squared}` になるからです！\n\n"
         
         # ステップ3: 定数項の計算
-        if c != 0:
-            k_final = Fraction(4*c - b**2, 4).limit_denominator()
-            explanation += f"**Step 3️⃣: 定数項の計算**\n\n"
-            explanation += f"```\n= (x + {half_coeff})^2 + (-{half_squared} + {c})\n"
-            explanation += f"= (x + {half_coeff})^2 + {k_final}\n```\n\n"
+        k_final = Fraction(4*c - b**2, 4)
+        explanation += f"**Step 3️⃣: 定数項の計算**\n\n"
+        explanation += f"```\n= (x + {half_coeff})^2 + (-{half_squared} + {c})\n= (x + {half_coeff})^2 + {k_final}\n```\n\n"
     
     # 最終答え
     a_ans, h_ans, k_ans = calculate_completion(a, b, c)
@@ -531,12 +483,6 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 3. 足して引く：x^2 + 6x + 9 - 9
                 4. 完成：(x + 3)^2 - 9
                 
-                **例：x^2 - 2x の場合**
-                1. xの係数：-2
-                2. その半分：-2 ÷ 2 = -1
-                3. 足して引く：x^2 - 2x + 1 - 1
-                4. 完成：(x - 1)^2 - 1
-                
                 💡 **覚え方**: 「半分の2乗を足して引く」！
                 """)
         
@@ -572,4 +518,137 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                         st.session_state.correct_answers += 1
                     else:
                         st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
-                        st.session_state
+                        st.session_state.wrong_problems.append((a, b, c, choices[selected_option], selected_option))
+                    
+                    # 選択した答えを保存
+                    st.session_state[f"selected_{st.session_state.current_problem}"] = selected_option
+                    # 回答済みフラグを設定
+                    st.session_state[answered_key] = True
+                    st.rerun()
+            
+            with col2:
+                if st.button("⏭️ スキップ", type="secondary"):
+                    st.session_state.wrong_problems.append((a, b, c, "スキップ", -1))
+                    st.session_state.current_problem += 1
+                    
+                    if st.session_state.current_problem >= st.session_state.problem_count:
+                        st.session_state.quiz_finished = True
+                    
+                    st.rerun()
+        
+        else:
+            # 既に回答済みの場合は結果を表示
+            selected_option = st.session_state[f"selected_{st.session_state.current_problem}"]
+            result_key = f"result_{st.session_state.current_problem}"
+            
+            st.markdown("### 📝 回答結果")
+            
+            # 選択肢を結果付きで表示
+            for i, choice in enumerate(choices):
+                if i == correct_index and i == selected_option:
+                    # 正解を選択した場合
+                    st.success(f"✅ **{chr(65+i)}.** {choice} ← あなたの選択（正解！）")
+                elif i == correct_index:
+                    # 正解だが選択されなかった場合
+                    st.info(f"🎯 **{chr(65+i)}.** {choice} ← 正解")
+                elif i == selected_option:
+                    # 不正解を選択した場合
+                    st.error(f"❌ **{chr(65+i)}.** {choice} ← あなたの選択（不正解）")
+                else:
+                    # その他の選択肢
+                    st.markdown(f"**{chr(65+i)}.** {choice}")
+            
+            # 解説表示（オプション）
+            with st.expander("📚 詳しい解説を見る", expanded=False):
+                st.markdown(explain_solution_detailed(a, b, c))
+            
+            st.markdown("---")
+            
+            # 次の問題へボタンまたは結果表示ボタン
+            if st.session_state.current_problem < st.session_state.problem_count - 1:
+                # まだ問題が残っている場合
+                if st.button("🚀 次の問題へ", type="primary", use_container_width=True):
+                    st.session_state.current_problem += 1
+                    st.rerun()
+            else:
+                # 最後の問題の場合
+                if st.button("🏁 結果を見る", type="primary", use_container_width=True):
+                    st.session_state.quiz_finished = True
+                    st.rerun()
+
+# クイズ終了時の結果表示
+else:
+    # 結果計算
+    total_time = time.time() - st.session_state.start_time if st.session_state.start_time else 0
+    accuracy = (st.session_state.correct_answers / st.session_state.problem_count) * 100 if st.session_state.problem_count > 0 else 0
+    
+    # 結果画面のヘッダー
+    if st.session_state.time_up:
+        st.header("⏰ 時間切れ！")
+        st.warning("制限時間が終了しました")
+    else:
+        st.header("🎉 クイズ完了！")
+        st.success("お疲れ様でした！")
+    
+    # 成績表示
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("📊 正解数", f"{st.session_state.correct_answers}/{st.session_state.problem_count}")
+    
+    with col2:
+        st.metric("🎯 正答率", f"{accuracy:.1f}%")
+    
+    with col3:
+        minutes = int(total_time // 60)
+        seconds = int(total_time % 60)
+        st.metric("⏱️ 経過時間", f"{minutes:02d}:{seconds:02d}")
+    
+    with col4:
+        st.metric("📈 レベル", st.session_state.level)
+    
+    # バッジ表示
+    badges = get_achievement_badge(accuracy, total_time, st.session_state.level)
+    if badges:
+        st.subheader("🏅 獲得バッジ")
+        for badge in badges:
+            st.markdown(f"- {badge}")
+    
+    # 間違えた問題の復習
+    if st.session_state.wrong_problems:
+        st.subheader("📝 復習問題")
+        st.write(f"間違えた問題が{len(st.session_state.wrong_problems)}問あります。復習しましょう！")
+        
+        for i, (a, b, c, wrong_answer, selected_index) in enumerate(st.session_state.wrong_problems):
+            with st.expander(f"復習問題 {i+1}: {format_quadratic(a, b, c)}"):
+                if wrong_answer == "スキップ":
+                    st.write("⏭️ この問題はスキップされました")
+                else:
+                    st.write(f"❌ あなたの答え: {wrong_answer}")
+                
+                # 正解表示
+                correct_a, correct_h, correct_k = calculate_completion(a, b, c)
+                correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+                st.write(f"✅ 正解: {correct_answer}")
+                
+                # 解説表示
+                st.markdown(explain_solution_detailed(a, b, c))
+    else:
+        st.success("🎊 全問正解！素晴らしいです！")
+    
+    # 再チャレンジボタン
+    if st.button("🔄 もう一度チャレンジ", type="primary", use_container_width=True):
+        # セッション状態をリセット
+        keys_to_reset = ['quiz_started', 'current_problem', 'correct_answers', 'start_time', 
+                        'time_up', 'quiz_finished', 'problems', 'wrong_problems', 'choices']
+        for key in keys_to_reset:
+            if key in st.session_state:
+                del st.session_state[key]
+        
+        # 回答状態をリセット
+        keys_to_delete = [key for key in st.session_state.keys() 
+                         if key.startswith(('answered_', 'result_', 'selected_', 'choice_'))]
+        for key in keys_to_delete:
+            del st.session_state[key]
+        
+        st.rerun()
