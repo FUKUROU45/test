@@ -572,9 +572,4 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                         st.session_state.correct_answers += 1
                     else:
                         st.session_state[f"result_{st.session_state.current_problem}"] = "incorrect"
-                        st.session_state.wrong_problems.append((a, b, c, choices[selected_option], selected_option))
-                    
-                    # 選択した答えを保存
-                    st.session_state[f"selected_{st.session_state.current_problem}"] = selected_option
-                    # 回答済みフラグを設定
-                    st.session_state[answered_key] = True
+                        st.session_state
