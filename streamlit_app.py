@@ -5,7 +5,6 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-# シンボル定義
 x = sp.symbols('x')
 
 def generate_question(difficulty):
@@ -35,7 +34,6 @@ def complete_the_square(a, b, c):
 
 def compare_expressions(user_input, correct_expr):
     try:
-        # "^"を"**"に置換してsympyで評価
         user_expr = sp.sympify(user_input.replace("^", "**"))
         return sp.simplify(user_expr - correct_expr) == 0
     except Exception:
@@ -56,7 +54,6 @@ def plot_graph(a, b, c):
     st.pyplot(fig)
     plt.close()
 
-# --- Streamlit UI ---
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
@@ -67,18 +64,14 @@ with st.sidebar:
     show_graph = st.checkbox("グラフを表示する", value=True)
     total_questions = st.number_input("問題数", 1, 20, 5)
 
+# セッション初期化
 if "questions" not in st.session_state:
-    st.session_state.questions = []
+    st.session_state.questions = [generate_question(difficulty) for _ in range(total_questions)]
     st.session_state.current_index = 0
     st.session_state.user_answers = []
     st.session_state.results = []
-    st.session_state.start_time = None
-    st.session_state.completed = False
-
-if not st.session_state.questions:
-    for _ in range(total_questions):
-        st.session_state.questions.append(generate_question(difficulty))
     st.session_state.start_time = time.time()
+    st.session_state.completed = False
 
 index = st.session_state.current_index
 a, b, c = st.session_state.questions[index]
@@ -91,12 +84,13 @@ st.latex(f"f(x) = {sp.latex(question_expr)}")
 if show_graph:
     plot_graph(a, b, c)
 
-if time_limit > 0:
+# タイマー処理
+if time_limit > 0 and not st.session_state.completed:
     elapsed = int(time.time() - st.session_state.start_time)
     remaining = time_limit - elapsed
     st.info(f"⏱ 残り時間: {remaining} 秒")
     if remaining <= 0:
-        st.warning("時間切れ！スキップします。")
+        st.warning("時間切れ！自動スキップします。")
         st.session_state.user_answers.append("（時間切れ）")
         st.session_state.results.append(False)
         st.session_state.current_index += 1
@@ -106,11 +100,12 @@ if time_limit > 0:
             st.session_state.start_time = time.time()
         st.experimental_rerun()
 
-answer = st.text_input("平方完成の形を入力（例: 2*(x + 1)**2 - 3）", key=index)
+answer = st.text_input("平方完成の形を入力してください（例: 2*(x + 1)**2 - 3）", key=index)
 
 col1, col2 = st.columns(2)
+
 with col1:
-    if st.button("判定", key=f"check_{index}"):
+    if st.button("判定", key=f"check_{index}") and not st.session_state.completed:
         is_correct = compare_expressions(answer, correct_expr)
         st.session_state.user_answers.append(answer)
         st.session_state.results.append(is_correct)
@@ -127,7 +122,7 @@ with col1:
         st.experimental_rerun()
 
 with col2:
-    if st.button("スキップ", key=f"skip_{index}"):
+    if st.button("スキップ", key=f"skip_{index}") and not st.session_state.completed:
         st.session_state.user_answers.append("（スキップ）")
         st.session_state.results.append(False)
         st.session_state.current_index += 1
