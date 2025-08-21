@@ -3,6 +3,7 @@ import random
 import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
+import time
 
 x = sp.symbols('x')
 
@@ -102,17 +103,19 @@ if "initialized" not in st.session_state:
         st.session_state.difficulty = st.radio("難易度を選択", ["初級", "中級", "上級"])
         st.session_state.total_questions = st.number_input("問題数", min_value=1, max_value=20, value=5)
         st.session_state.show_graph = st.radio("グラフを表示しますか？", ["表示する", "表示しない"]) == "表示する"
+        st.session_state.time_limit = st.selectbox("制限時間（秒）", [0, 15, 30, 60], index=2)
         if st.button("問題を開始"):
             st.session_state.questions = [generate_question(st.session_state.difficulty) for _ in range(st.session_state.total_questions)]
             st.session_state.current_index = 0
             st.session_state.user_answers = []
             st.session_state.results = []
             st.session_state.completed = False
+            st.session_state.start_time = time.time()
             st.session_state.initialized = True
             st.experimental_rerun()
     st.stop()
 
-# 全問題終了時の画面
+# 終了画面
 if st.session_state.completed:
     st.header("📝 結果")
     score = sum(st.session_state.results)
@@ -153,6 +156,24 @@ st.latex(f"f(x) = {sp.latex(expr)}")
 if st.session_state.show_graph:
     plot_graph(a, b, c)
 
+# 制限時間処理
+time_limit = st.session_state.time_limit
+if time_limit > 0:
+    elapsed = time.time() - st.session_state.start_time
+    remaining = int(time_limit - elapsed)
+    st.info(f"⏱ 残り時間: {remaining} 秒")
+    if remaining <= 0:
+        # 自動スキップ処理
+        st.warning("時間切れです！この問題はスキップされました。")
+        st.session_state.user_answers.append("（時間切れ）")
+        st.session_state.results.append(False)
+        st.session_state.current_index += 1
+        if st.session_state.current_index >= st.session_state.total_questions:
+            st.session_state.completed = True
+        else:
+            st.session_state.start_time = time.time()
+        st.experimental_rerun()
+
 # 四択の選択肢をラジオボタンで表示
 user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=f"choice_{index}")
 
@@ -163,6 +184,8 @@ def check_answer():
     st.session_state.current_index += 1
     if st.session_state.current_index >= st.session_state.total_questions:
         st.session_state.completed = True
+    else:
+        st.session_state.start_time = time.time()
 
 def skip_question():
     st.session_state.user_answers.append("（スキップ）")
@@ -170,6 +193,8 @@ def skip_question():
     st.session_state.current_index += 1
     if st.session_state.current_index >= st.session_state.total_questions:
         st.session_state.completed = True
+    else:
+        st.session_state.start_time = time.time()
 
 col1, col2 = st.columns(2)
 with col1:
