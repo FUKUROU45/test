@@ -6,9 +6,6 @@ import numpy as np
 
 x = sp.symbols('x')
 
-# --------------------
-# 問題生成・整形関数
-# --------------------
 def generate_question(difficulty):
     if difficulty == "初級":
         a = random.choice([1, -1])
@@ -32,14 +29,11 @@ def format_quadratic(a, b, c):
 def complete_the_square(a, b, c):
     h = -b / (2 * a)
     k = a * h**2 + b * h + c
-    # h, k を整数に丸める（四捨五入）
     h_int = int(round(h))
     k_int = int(round(k))
-    expr = a * (x - h_int)**2 + k_int
-    return expr, h_int, k_int, a
+    return a, h_int, k_int
 
 def format_expr(h, k, a):
-    # a部分
     if abs(a - 1) < 1e-8:
         a_part = ""
     elif abs(a + 1) < 1e-8:
@@ -47,15 +41,13 @@ def format_expr(h, k, a):
     else:
         a_part = str(a)
 
-    # h部分
     if h == 0:
-        x_part = "x^{2}"
+        x_part = "x²"
     elif h > 0:
-        x_part = f"(x - {h})^2"
+        x_part = f"(x - {h})²"
     else:
-        x_part = f"(x + {-h})^2"
+        x_part = f"(x + {-h})²"
 
-    # k部分
     if k == 0:
         k_part = ""
     elif k > 0:
@@ -66,17 +58,17 @@ def format_expr(h, k, a):
     return f"{a_part}{x_part}{k_part}"
 
 def generate_choices(a, b, c):
-    correct_expr, h, k, a = complete_the_square(a, b, c)
-    correct_str = format_expr(h, k, a)
+    a_c, h, k = complete_the_square(a, b, c)
+    correct_str = format_expr(h, k, a_c)
     choices = [correct_str]
 
     attempts = 0
-    while len(choices) < 4 and attempts < 20:
+    while len(choices) < 4 and attempts < 30:
         delta_h = random.choice([-3, -2, -1, 1, 2, 3])
         delta_k = random.choice([-3, -2, -1, 1, 2, 3])
         wrong_h = h + delta_h
         wrong_k = k + delta_k
-        wrong_str = format_expr(wrong_h, wrong_k, a)
+        wrong_str = format_expr(wrong_h, wrong_k, a_c)
         if wrong_str not in choices:
             choices.append(wrong_str)
         attempts += 1
@@ -97,31 +89,34 @@ def plot_graph(a, b, c):
     plt.close()
 
 # --------------------
-# Streamlit アプリ開始
+# Streamlit UI開始
 # --------------------
-st.set_page_config("平方完成 四択トレーニング", layout="centered")
+
+st.set_page_config(page_title="平方完成 四択トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング（四択・整数）")
 
-# 設定
-with st.sidebar:
-    st.header("▶ 設定")
-    difficulty = st.radio("難易度", ["初級", "中級", "上級"])
-    total_questions = st.number_input("問題数", 1, 20, 5)
-    show_graph = st.radio("グラフを表示しますか？", ["表示する", "表示しない"]) == "表示する"
+# 初期設定画面
+if "initialized" not in st.session_state:
+    with st.sidebar:
+        st.header("▶ 設定")
+        st.session_state.difficulty = st.radio("難易度を選択", ["初級", "中級", "上級"])
+        st.session_state.total_questions = st.number_input("問題数", min_value=1, max_value=20, value=5)
+        st.session_state.show_graph = st.radio("グラフを表示しますか？", ["表示する", "表示しない"]) == "表示する"
+        if st.button("問題を開始"):
+            st.session_state.questions = [generate_question(st.session_state.difficulty) for _ in range(st.session_state.total_questions)]
+            st.session_state.current_index = 0
+            st.session_state.user_answers = []
+            st.session_state.results = []
+            st.session_state.completed = False
+            st.session_state.initialized = True
+            st.experimental_rerun()
+    st.stop()
 
-# 初期化
-if "questions" not in st.session_state:
-    st.session_state.questions = [generate_question(difficulty) for _ in range(total_questions)]
-    st.session_state.current_index = 0
-    st.session_state.user_answers = []
-    st.session_state.results = []
-    st.session_state.completed = False
-
-# 終了チェック
+# 全問題終了時の画面
 if st.session_state.completed:
     st.header("📝 結果")
     score = sum(st.session_state.results)
-    st.success(f"あなたのスコア: {score} / {int(total_questions)}")
+    st.success(f"あなたのスコア: {score} / {st.session_state.total_questions}")
 
     for i, ((a, b, c), user_ans, result) in enumerate(zip(
         st.session_state.questions,
@@ -129,15 +124,15 @@ if st.session_state.completed:
         st.session_state.results
     )):
         expr = format_quadratic(a, b, c)
-        correct_expr, h, k, a = complete_the_square(a, b, c)
-        correct_str = format_expr(h, k, a)
+        a_c, h, k = complete_the_square(a, b, c)
+        correct_str = format_expr(h, k, a_c)
 
         st.markdown(f"### 第 {i+1} 問")
         st.latex(f"f(x) = {sp.latex(expr)}")
         st.write(f"あなたの答え: `{user_ans}`")
         st.write("判定:", "✅ 正解" if result else "❌ 不正解")
         if not result:
-            st.latex(f"正しい平方完成: f(x) = {sp.latex(correct_expr)}")
+            st.write(f"正しい平方完成: `{correct_str}`")
         st.markdown("---")
 
     if st.button("もう一度やる"):
@@ -152,34 +147,32 @@ a, b, c = st.session_state.questions[index]
 expr = format_quadratic(a, b, c)
 choices, correct = generate_choices(a, b, c)
 
-st.markdown(f"### 問題 {index + 1} / {int(total_questions)}")
+st.markdown(f"### 問題 {index + 1} / {st.session_state.total_questions}")
 st.latex(f"f(x) = {sp.latex(expr)}")
 
-if show_graph:
+if st.session_state.show_graph:
     plot_graph(a, b, c)
 
-user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=index)
+# 四択の選択肢をラジオボタンで表示
+user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=f"choice_{index}")
+
+def check_answer():
+    is_correct = (st.session_state[f"choice_{index}"] == correct)
+    st.session_state.user_answers.append(st.session_state[f"choice_{index}"])
+    st.session_state.results.append(is_correct)
+    st.session_state.current_index += 1
+    if st.session_state.current_index >= st.session_state.total_questions:
+        st.session_state.completed = True
+
+def skip_question():
+    st.session_state.user_answers.append("（スキップ）")
+    st.session_state.results.append(False)
+    st.session_state.current_index += 1
+    if st.session_state.current_index >= st.session_state.total_questions:
+        st.session_state.completed = True
 
 col1, col2 = st.columns(2)
 with col1:
-    if st.button("判定", key=f"check_{index}"):
-        is_correct = (user_choice == correct)
-        st.session_state.user_answers.append(user_choice)
-        st.session_state.results.append(is_correct)
-        st.session_state.current_index += 1
-
-        if st.session_state.current_index >= total_questions:
-            st.session_state.completed = True
-
-        st.experimental_rerun()
-
+    st.button("判定", on_click=check_answer)
 with col2:
-    if st.button("スキップ", key=f"skip_{index}"):
-        st.session_state.user_answers.append("（スキップ）")
-        st.session_state.results.append(False)
-        st.session_state.current_index += 1
-
-        if st.session_state.current_index >= total_questions:
-            st.session_state.completed = True
-
-        st.experimental_rerun()
+    st.button("スキップ", on_click=skip_question)
