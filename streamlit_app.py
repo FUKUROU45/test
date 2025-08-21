@@ -2,13 +2,17 @@ import streamlit as st
 import random
 import sympy as sp
 import time
-import matplotlib
-matplotlib.use('Agg')  # ← Streamlit Cloud 対策
-import matplotlib.pyplot as plt
 import numpy as np
 
-# --- 問題生成 ---
+# グラフ描画用
+import matplotlib
+matplotlib.use("Agg")  # Streamlit Cloud対策
+import matplotlib.pyplot as plt
+
+# --- 関数定義 ---
+
 def generate_question(difficulty):
+    """難易度に応じた2次関数の係数(a, b, c)を生成"""
     if difficulty == "初級":
         a = random.choice([1, -1])
         b = random.randint(-5, 5)
@@ -26,16 +30,19 @@ def generate_question(difficulty):
     return a, b, c
 
 def format_quadratic(a, b, c):
+    """式の展開形"""
     x = sp.symbols('x')
     return sp.expand(a * x**2 + b * x + c)
 
 def complete_the_square(a, b, c):
+    """平方完成（変形後の式と頂点）"""
     x = sp.symbols('x')
     h = -b / (2 * a)
     k = a * h**2 + b * h + c
     return a * (x - h)**2 + k, h, k
 
 def compare_expressions(user_input, correct_expr):
+    """ユーザーの入力と正解を比較"""
     x = sp.symbols('x')
     try:
         user_expr = sp.sympify(user_input.replace("^", "**"))
@@ -44,10 +51,11 @@ def compare_expressions(user_input, correct_expr):
         return False
 
 def plot_graph(a, b, c):
+    """2次関数のグラフを表示"""
     x = np.linspace(-10, 10, 400)
     y = a * x**2 + b * x + c
     fig, ax = plt.subplots()
-    ax.plot(x, y, label=f'f(x) = {a}x² + {b}x + {c}')
+    ax.plot(x, y, label=f"f(x) = {a}x² + {b}x + {c}")
     ax.axhline(0, color='black', linewidth=0.5)
     ax.axvline(0, color='black', linewidth=0.5)
     ax.set_title("f(x) のグラフ")
@@ -58,10 +66,12 @@ def plot_graph(a, b, c):
     st.pyplot(fig)
     plt.close()
 
-# --- Streamlit UI ---
+# --- UI 設定 ---
+
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
+# サイドバー設定
 with st.sidebar:
     st.header("設定")
     difficulty = st.radio("難易度", ["初級", "中級", "上級"])
@@ -78,11 +88,10 @@ if "questions" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.completed = False
 
-# --- 問題生成（初回） ---
+# --- 問題を生成（初回のみ） ---
 if not st.session_state.questions:
     for _ in range(total_questions):
-        a, b, c = generate_question(difficulty)
-        st.session_state.questions.append((a, b, c))
+        st.session_state.questions.append(generate_question(difficulty))
     st.session_state.start_time = time.time()
 
 # --- 現在の問題 ---
@@ -98,7 +107,7 @@ st.latex(f"f(x) = {sp.latex(question_expr)}")
 if show_graph:
     plot_graph(a, b, c)
 
-# --- タイマー処理 ---
+# --- タイマー ---
 if time_limit > 0:
     elapsed = int(time.time() - st.session_state.start_time)
     remaining = time_limit - elapsed
@@ -115,7 +124,7 @@ if time_limit > 0:
         st.experimental_rerun()
 
 # --- 回答入力 ---
-answer = st.text_input("平方完成の形を入力してください（例: 2*(x + 1)**2 - 3）", key=index)
+answer = st.text_input("平方完成の形を入力（例: 2*(x + 1)**2 - 3）", key=index)
 
 col1, col2 = st.columns(2)
 
@@ -151,12 +160,12 @@ with col2:
 if st.session_state.completed:
     st.header("📝 結果")
     score = sum(st.session_state.results)
-    st.success(f"あなたのスコア: {score} / {int(total_questions)}")
+    st.success(f"スコア: {score} / {int(total_questions)}")
 
     for i, ((a, b, c), user_ans, result) in enumerate(zip(st.session_state.questions, st.session_state.user_answers, st.session_state.results)):
-        st.markdown(f"### 第 {i+1} 問")
         expr = format_quadratic(a, b, c)
         correct_expr, _, _ = complete_the_square(a, b, c)
+        st.markdown(f"### 第 {i+1} 問")
         st.latex(f"f(x) = {sp.latex(expr)}")
         st.write(f"あなたの答え: `{user_ans}`")
         st.write("判定:", "✅ 正解" if result else "❌ 不正解")
