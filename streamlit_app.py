@@ -309,17 +309,10 @@ if not st.session_state.quiz_started:
     col1, col2 = st.columns(2)
     
     with col1:
-        # 前回選択したレベルがあれば初期値に設定
-        default_level_index = 0
-        if 'selected_level' in st.session_state:
-            level_options = ["初級", "中級", "上級"]
-            if st.session_state.selected_level in level_options:
-                default_level_index = level_options.index(st.session_state.selected_level)
-        
         level = st.selectbox(
             "難易度を選択：",
             ["初級", "中級", "上級"],
-            index=default_level_index,
+            index=0,
             help="初級：x^2 + bx、中級：x^2 + bx + c、上級：ax^2 + bx + c"
         )
         
@@ -338,9 +331,9 @@ if not st.session_state.quiz_started:
     with col2:
         time_limit = st.selectbox(
             "制限時間を選択：",
-            [60, 120, 180, 300, 600],  # 10分まで追加
+            [60, 120, 180, 300, 600],
             format_func=lambda x: f"{x//60}分" if x >= 60 else f"{x}秒",
-            index=1  # デフォルト2分
+            index=1
         )
         
         st.write("**レベル説明：**")
@@ -553,4 +546,19 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 elif i == selected_option:
                     st.error(f"❌ **{chr(65+i)}.** {choice} ← あなたの選択（不正解）")
                 else:
-                    st
+                    st.write(f"**{chr(65+i)}.** {choice}")
+            
+            # 解説表示（オプション）
+            with st.expander("📚 詳しい解説を見る", expanded=False):
+                st.markdown(explain_solution_detailed(a, b, c))
+            
+            st.markdown("---")
+            
+            # 次の問題へボタンまたは結果表示ボタン
+            if st.session_state.current_problem < st.session_state.problem_count - 1:
+                # まだ問題が残っている場合
+                if st.button("🚀 次の問題へ", type="primary", use_container_width=True):
+                    st.session_state.current_problem += 1
+                    st.rerun()
+            else:
+                # 最後の問題の場合
