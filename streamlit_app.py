@@ -562,3 +562,83 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                     st.rerun()
             else:
                 # 最後の問題の場合
+                if st.button("🏁 結果を見る", type="primary", use_container_width=True):
+                    st.session_state.quiz_finished = True
+                    st.rerun()
+
+# クイズ終了時の結果表示
+else:
+    # 結果計算
+    total_time = time.time() - st.session_state.start_time if st.session_state.start_time else 0
+    accuracy = (st.session_state.correct_answers / st.session_state.problem_count) * 100 if st.session_state.problem_count > 0 else 0
+    
+    # 結果画面のヘッダー
+    if st.session_state.time_up:
+        st.header("⏰ 時間切れ！")
+        st.warning("制限時間が終了しました")
+    else:
+        st.header("🎉 クイズ完了！")
+        st.success("お疲れ様でした！")
+    
+    # 成績表示
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("📊 正解数", f"{st.session_state.correct_answers}/{st.session_state.problem_count}")
+    
+    with col2:
+        st.metric("🎯 正答率", f"{accuracy:.1f}%")
+    
+    with col3:
+        minutes = int(total_time // 60)
+        seconds = int(total_time % 60)
+        st.metric("⏱️ 経過時間", f"{minutes:02d}:{seconds:02d}")
+    
+    with col4:
+        st.metric("📈 レベル", st.session_state.level)
+    
+    # バッジ表示
+    badges = get_achievement_badge(accuracy, total_time, st.session_state.level)
+    if badges:
+        st.subheader("🏅 獲得バッジ")
+        for badge in badges:
+            st.markdown(f"- {badge}")
+    
+    # 間違えた問題の復習
+    if st.session_state.wrong_problems:
+        st.subheader("📝 復習問題")
+        st.write(f"間違えた問題が{len(st.session_state.wrong_problems)}問あります。復習しましょう！")
+        
+        for i, (a, b, c, wrong_answer, selected_index) in enumerate(st.session_state.wrong_problems):
+            with st.expander(f"復習問題 {i+1}: {format_quadratic(a, b, c)}"):
+                if wrong_answer == "スキップ":
+                    st.write("⏭️ この問題はスキップされました")
+                else:
+                    st.write(f"❌ あなたの答え: {wrong_answer}")
+                
+                # 正解表示
+                correct_a, correct_h, correct_k = calculate_completion(a, b, c)
+                correct_answer = format_completion_answer(correct_a, correct_h, correct_k)
+                st.write(f"✅ 正解: {correct_answer}")
+                
+                # 解説表示
+                st.markdown(explain_solution_detailed(a, b, c))
+    else:
+        st.success("🎊 全問正解！素晴らしいです！")
+    
+    # 再チャレンジボタン
+    if st.button("🔄 もう一度チャレンジ", type="primary", use_container_width=True):
+        # セッション状態をリセット
+        keys_to_reset = ['quiz_started', 'current_problem', 'correct_answers', 'start_time', 
+                        'time_up', 'quiz_finished', 'problems', 'wrong_problems', 'choices']
+        for key in keys_to_reset:
+            if key in st.session_state:
+                del st.session_state[key]
+        
+        # 回答状態をリセット
+        keys_to_delete = [key for key in st.session_state.keys() 
+                         if key.startswith(('answered_', 'result_', 'selected_', 'choice_'))]
+        for key in keys_to_delete:
+            del st.session_state[key]
+        
+        st.rerun()
