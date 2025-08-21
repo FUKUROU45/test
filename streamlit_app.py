@@ -496,10 +496,15 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
         
         if answered_key not in st.session_state:
             # まだ回答していない場合
+            # 選択肢を表示
+            choice_labels = []
+            for i, choice in enumerate(choices):
+                choice_labels.append(f"{chr(65+i)}. {choice}")
+            
             selected_option = st.radio(
-                "",
+                "選択してください：",
                 options=range(len(choices)),
-                format_func=lambda x: f"**{chr(65+x)}.** {choices[x]}",
+                format_func=lambda x: choice_labels[x],
                 key=f"choice_{st.session_state.current_problem}"
             )
             
@@ -536,17 +541,22 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
             selected_option = st.session_state[f"selected_{st.session_state.current_problem}"]
             result_key = f"result_{st.session_state.current_problem}"
             
+            st.markdown("### 📝 回答結果")
+            
             # 選択肢を結果付きで表示
             for i, choice in enumerate(choices):
-                if i == correct_index:
-                    if i == selected_option:
-                        st.success(f"✅ **{chr(65+i)}.** {choice} ← あなたの選択（正解！）")
-                    else:
-                        st.success(f"🎯 **{chr(65+i)}.** {choice} ← 正解")
+                if i == correct_index and i == selected_option:
+                    # 正解を選択した場合
+                    st.success(f"✅ **{chr(65+i)}.** {choice} ← あなたの選択（正解！）")
+                elif i == correct_index:
+                    # 正解だが選択されなかった場合
+                    st.info(f"🎯 **{chr(65+i)}.** {choice} ← 正解")
                 elif i == selected_option:
+                    # 不正解を選択した場合
                     st.error(f"❌ **{chr(65+i)}.** {choice} ← あなたの選択（不正解）")
                 else:
-                    st.write(f"**{chr(65+i)}.** {choice}")
+                    # その他の選択肢
+                    st.markdown(f"**{chr(65+i)}.** {choice}")
             
             # 解説表示（オプション）
             with st.expander("📚 詳しい解説を見る", expanded=False):
