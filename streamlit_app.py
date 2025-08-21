@@ -32,13 +32,6 @@ def complete_the_square(a, b, c):
     k = a * h**2 + b * h + c
     return a * (x - h)**2 + k, h, k
 
-def compare_expressions(user_input, correct_expr):
-    try:
-        user_expr = sp.sympify(user_input.replace("^", "**"))
-        return sp.simplify(user_expr - correct_expr) == 0
-    except Exception:
-        return False
-
 def plot_graph(a, b, c):
     fig, ax = plt.subplots()
     xx = np.linspace(-10, 10, 400)
@@ -54,17 +47,35 @@ def plot_graph(a, b, c):
     st.pyplot(fig)
     plt.close()
 
+def generate_choices(a, b, c):
+    correct_expr, h, k = complete_the_square(a, b, c)
+    correct_str = sp.latex(correct_expr)
+
+    choices = [correct_str]
+
+    for _ in range(3):
+        delta_h = random.choice([-1, 1]) * random.uniform(0.5, 2)
+        delta_k = random.choice([-1, 1]) * random.uniform(0.5, 3)
+        wrong_h = h + delta_h
+        wrong_k = k + delta_k
+        wrong_expr = a * (x - wrong_h)**2 + wrong_k
+        choices.append(sp.latex(wrong_expr))
+
+    random.shuffle(choices)
+    return choices, correct_str
+
+# --- Streamlit UI ---
+
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
 with st.sidebar:
-    st.header("設定")
+    st.header("▶ 設定")
     difficulty = st.radio("難易度", ["初級", "中級", "上級"])
-    time_limit = st.selectbox("制限時間（秒）", [0, 30, 60])
-    show_graph = st.checkbox("グラフを表示する", value=True)
-    total_questions = st.number_input("問題数", 1, 20, 5)
+    total_questions = st.number_input("問題数", min_value=1, max_value=20, value=5)
+    time_limit = st.selectbox("制限時間（秒）", options=[0, 30, 60], index=0)
+    show_graph = st.radio("グラフを表示しますか？", ["表示する", "表示しない"], index=0) == "表示する"
 
-# セッション初期化
 if "questions" not in st.session_state:
     st.session_state.questions = [generate_question(difficulty) for _ in range(total_questions)]
     st.session_state.current_index = 0
@@ -76,7 +87,8 @@ if "questions" not in st.session_state:
 index = st.session_state.current_index
 a, b, c = st.session_state.questions[index]
 question_expr = format_quadratic(a, b, c)
-correct_expr, h, k = complete_the_square(a, b, c)
+
+choices, correct_answer = generate_choices(a, b, c)
 
 st.markdown(f"### 問題 {index + 1} / {int(total_questions)}")
 st.latex(f"f(x) = {sp.latex(question_expr)}")
@@ -100,20 +112,20 @@ if time_limit > 0 and not st.session_state.completed:
             st.session_state.start_time = time.time()
         st.experimental_rerun()
 
-answer = st.text_input("平方完成の形を入力してください（例: 2*(x + 1)**2 - 3）", key=index)
+user_choice = st.radio("答えを選んでください", choices, key=index)
 
 col1, col2 = st.columns(2)
 
 with col1:
     if st.button("判定", key=f"check_{index}") and not st.session_state.completed:
-        is_correct = compare_expressions(answer, correct_expr)
-        st.session_state.user_answers.append(answer)
+        is_correct = (user_choice == correct_answer)
+        st.session_state.user_answers.append(user_choice)
         st.session_state.results.append(is_correct)
         if is_correct:
             st.success("正解です！")
         else:
             st.error("不正解です。")
-            st.markdown(f"正解は: $f(x) = {sp.latex(correct_expr)}$")
+            st.markdown(f"正解は: $f(x) = {correct_answer}$")
         st.session_state.current_index += 1
         if st.session_state.current_index >= total_questions:
             st.session_state.completed = True
