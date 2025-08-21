@@ -2,6 +2,8 @@ import streamlit as st
 import random
 import sympy as sp
 import time
+import matplotlib
+matplotlib.use('Agg')  # ← Streamlit Cloud 対策
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -54,6 +56,7 @@ def plot_graph(a, b, c):
     ax.grid(True)
     ax.legend()
     st.pyplot(fig)
+    plt.close()
 
 # --- Streamlit UI ---
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
@@ -66,7 +69,7 @@ with st.sidebar:
     show_graph = st.checkbox("グラフを表示する", value=True)
     total_questions = st.number_input("問題数", 1, 20, 5)
 
-# --- セッション状態初期化 ---
+# --- セッション初期化 ---
 if "questions" not in st.session_state:
     st.session_state.questions = []
     st.session_state.current_index = 0
@@ -75,7 +78,7 @@ if "questions" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.completed = False
 
-# --- 初回のみ問題生成 ---
+# --- 問題生成（初回） ---
 if not st.session_state.questions:
     for _ in range(total_questions):
         a, b, c = generate_question(difficulty)
@@ -95,7 +98,7 @@ st.latex(f"f(x) = {sp.latex(question_expr)}")
 if show_graph:
     plot_graph(a, b, c)
 
-# --- タイマー ---
+# --- タイマー処理 ---
 if time_limit > 0:
     elapsed = int(time.time() - st.session_state.start_time)
     remaining = time_limit - elapsed
