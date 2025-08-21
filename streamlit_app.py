@@ -3,7 +3,6 @@ import random
 import sympy as sp
 import matplotlib.pyplot as plt
 import numpy as np
-import time
 
 x = sp.symbols('x')
 
@@ -33,36 +32,36 @@ def format_quadratic(a, b, c):
 def complete_the_square(a, b, c):
     h = -b / (2 * a)
     k = a * h**2 + b * h + c
-    expr = a * (x - h)**2 + k
-    return expr, h, k, a
+    # h, k を整数に丸める（四捨五入）
+    h_int = int(round(h))
+    k_int = int(round(k))
+    expr = a * (x - h_int)**2 + k_int
+    return expr, h_int, k_int, a
 
 def format_expr(h, k, a):
-    def fmt(num):
-        return f"{num:.3f}"
-
     # a部分
     if abs(a - 1) < 1e-8:
         a_part = ""
     elif abs(a + 1) < 1e-8:
         a_part = "-"
     else:
-        a_part = fmt(a)
+        a_part = str(a)
 
     # h部分
-    if abs(h) < 1e-8:
+    if h == 0:
         x_part = "x^{2}"
     elif h > 0:
-        x_part = f"(x - {fmt(h)})^2"
+        x_part = f"(x - {h})^2"
     else:
-        x_part = f"(x + {fmt(-h)})^2"
+        x_part = f"(x + {-h})^2"
 
     # k部分
-    if abs(k) < 1e-8:
+    if k == 0:
         k_part = ""
     elif k > 0:
-        k_part = f" + {fmt(k)}"
+        k_part = f" + {k}"
     else:
-        k_part = f" - {fmt(-k)}"
+        k_part = f" - {-k}"
 
     return f"{a_part}{x_part}{k_part}"
 
@@ -71,15 +70,16 @@ def generate_choices(a, b, c):
     correct_str = format_expr(h, k, a)
     choices = [correct_str]
 
-    # 間違い選択肢を作る
-    for _ in range(3):
-        delta_h = random.choice([-1, 1]) * random.uniform(0.5, 2)
-        delta_k = random.choice([-1, 1]) * random.uniform(0.5, 3)
+    attempts = 0
+    while len(choices) < 4 and attempts < 20:
+        delta_h = random.choice([-3, -2, -1, 1, 2, 3])
+        delta_k = random.choice([-3, -2, -1, 1, 2, 3])
         wrong_h = h + delta_h
         wrong_k = k + delta_k
         wrong_str = format_expr(wrong_h, wrong_k, a)
         if wrong_str not in choices:
             choices.append(wrong_str)
+        attempts += 1
 
     random.shuffle(choices)
     return choices, correct_str
@@ -100,7 +100,7 @@ def plot_graph(a, b, c):
 # Streamlit アプリ開始
 # --------------------
 st.set_page_config("平方完成 四択トレーニング", layout="centered")
-st.title("📘 平方完成トレーニング（四択）")
+st.title("📘 平方完成トレーニング（四択・整数）")
 
 # 設定
 with st.sidebar:
