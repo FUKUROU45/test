@@ -44,19 +44,19 @@ def compare_expressions(user_input, correct_expr):
 def plot_graph(a, b, c):
     x = np.linspace(-10, 10, 400)
     y = a * x**2 + b * x + c
-    plt.plot(x, y, label=f'f(x) = {a}x² + {b}x + {c}')
-    plt.axhline(0, color='black', linewidth=0.5)
-    plt.axvline(0, color='black', linewidth=0.5)
-    plt.title("f(x) のグラフ")
-    plt.xlabel("x")
-    plt.ylabel("f(x)")
-    plt.grid(True)
-    plt.legend()
-    st.pyplot(plt.gcf())
-    plt.clf()
+    fig, ax = plt.subplots()
+    ax.plot(x, y, label=f'f(x) = {a}x² + {b}x + {c}')
+    ax.axhline(0, color='black', linewidth=0.5)
+    ax.axvline(0, color='black', linewidth=0.5)
+    ax.set_title("f(x) のグラフ")
+    ax.set_xlabel("x")
+    ax.set_ylabel("f(x)")
+    ax.grid(True)
+    ax.legend()
+    st.pyplot(fig)
 
 # --- Streamlit UI ---
-
+st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
 with st.sidebar:
@@ -66,6 +66,7 @@ with st.sidebar:
     show_graph = st.checkbox("グラフを表示する", value=True)
     total_questions = st.number_input("問題数", 1, 20, 5)
 
+# --- セッション状態初期化 ---
 if "questions" not in st.session_state:
     st.session_state.questions = []
     st.session_state.current_index = 0
@@ -74,7 +75,7 @@ if "questions" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.completed = False
 
-# --- 初回問題生成 ---
+# --- 初回のみ問題生成 ---
 if not st.session_state.questions:
     for _ in range(total_questions):
         a, b, c = generate_question(difficulty)
@@ -116,7 +117,7 @@ answer = st.text_input("平方完成の形を入力してください（例: 2*(
 col1, col2 = st.columns(2)
 
 with col1:
-    if st.button("判定", key="check"):
+    if st.button("判定", key=f"check_{index}"):
         is_correct = compare_expressions(answer, correct_expr)
         st.session_state.user_answers.append(answer)
         st.session_state.results.append(is_correct)
@@ -133,7 +134,7 @@ with col1:
         st.experimental_rerun()
 
 with col2:
-    if st.button("スキップ", key="skip"):
+    if st.button("スキップ", key=f"skip_{index}"):
         st.session_state.user_answers.append("（スキップ）")
         st.session_state.results.append(False)
         st.session_state.current_index += 1
