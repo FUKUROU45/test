@@ -5,10 +5,9 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-# --- 数式処理用 ---
+# シンボル定義
 x = sp.symbols('x')
 
-# --- 問題生成 ---
 def generate_question(difficulty):
     if difficulty == "初級":
         a = random.choice([1, -1])
@@ -18,7 +17,7 @@ def generate_question(difficulty):
         a = random.choice([-2, -1, 1, 2])
         b = random.randint(-8, 8)
         c = random.randint(-8, 8)
-    else:
+    else:  # 上級
         a = random.randint(-5, 5)
         while a == 0:
             a = random.randint(-5, 5)
@@ -36,6 +35,7 @@ def complete_the_square(a, b, c):
 
 def compare_expressions(user_input, correct_expr):
     try:
+        # "^"を"**"に置換してsympyで評価
         user_expr = sp.sympify(user_input.replace("^", "**"))
         return sp.simplify(user_expr - correct_expr) == 0
     except Exception:
@@ -56,7 +56,7 @@ def plot_graph(a, b, c):
     st.pyplot(fig)
     plt.close()
 
-# --- UI設定 ---
+# --- Streamlit UI ---
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
@@ -67,7 +67,6 @@ with st.sidebar:
     show_graph = st.checkbox("グラフを表示する", value=True)
     total_questions = st.number_input("問題数", 1, 20, 5)
 
-# --- セッション状態初期化 ---
 if "questions" not in st.session_state:
     st.session_state.questions = []
     st.session_state.current_index = 0
@@ -76,13 +75,11 @@ if "questions" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.completed = False
 
-# --- 問題生成 ---
 if not st.session_state.questions:
     for _ in range(total_questions):
         st.session_state.questions.append(generate_question(difficulty))
     st.session_state.start_time = time.time()
 
-# --- 現在の問題 ---
 index = st.session_state.current_index
 a, b, c = st.session_state.questions[index]
 question_expr = format_quadratic(a, b, c)
@@ -94,7 +91,6 @@ st.latex(f"f(x) = {sp.latex(question_expr)}")
 if show_graph:
     plot_graph(a, b, c)
 
-# --- タイマー ---
 if time_limit > 0:
     elapsed = int(time.time() - st.session_state.start_time)
     remaining = time_limit - elapsed
@@ -110,11 +106,9 @@ if time_limit > 0:
             st.session_state.start_time = time.time()
         st.experimental_rerun()
 
-# --- 回答入力 ---
 answer = st.text_input("平方完成の形を入力（例: 2*(x + 1)**2 - 3）", key=index)
 
 col1, col2 = st.columns(2)
-
 with col1:
     if st.button("判定", key=f"check_{index}"):
         is_correct = compare_expressions(answer, correct_expr)
@@ -143,17 +137,16 @@ with col2:
             st.session_state.start_time = time.time()
         st.experimental_rerun()
 
-# --- 結果 ---
 if st.session_state.completed:
     st.header("📝 結果")
     score = sum(st.session_state.results)
     st.success(f"スコア: {score} / {int(total_questions)}")
 
     for i, ((a, b, c), user_ans, result) in enumerate(zip(
-            st.session_state.questions,
-            st.session_state.user_answers,
-            st.session_state.results)):
-
+        st.session_state.questions,
+        st.session_state.user_answers,
+        st.session_state.results
+    )):
         expr = format_quadratic(a, b, c)
         correct_expr, _, _ = complete_the_square(a, b, c)
         st.markdown(f"### 第 {i+1} 問")
