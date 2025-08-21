@@ -553,4 +553,4 @@ elif st.session_state.quiz_started and not st.session_state.quiz_finished:
                 elif i == selected_option:
                     st.error(f"❌ **{chr(65+i)}.** {choice} ← あなたの選択（不正解）")
                 else:
-                    st.write(f"**{chr(65+i)}.** {choice}")
+                    st
