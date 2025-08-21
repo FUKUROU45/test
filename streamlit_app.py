@@ -3,16 +3,13 @@ import random
 import sympy as sp
 import time
 import numpy as np
-
-# グラフ描画用
-import matplotlib
-matplotlib.use("Agg")  # Streamlit Cloud対策
 import matplotlib.pyplot as plt
 
-# --- 関数定義 ---
+# --- 数式処理用 ---
+x = sp.symbols('x')
 
+# --- 問題生成 ---
 def generate_question(difficulty):
-    """難易度に応じた2次関数の係数(a, b, c)を生成"""
     if difficulty == "初級":
         a = random.choice([1, -1])
         b = random.randint(-5, 5)
@@ -21,7 +18,7 @@ def generate_question(difficulty):
         a = random.choice([-2, -1, 1, 2])
         b = random.randint(-8, 8)
         c = random.randint(-8, 8)
-    else:  # 上級
+    else:
         a = random.randint(-5, 5)
         while a == 0:
             a = random.randint(-5, 5)
@@ -30,20 +27,14 @@ def generate_question(difficulty):
     return a, b, c
 
 def format_quadratic(a, b, c):
-    """式の展開形"""
-    x = sp.symbols('x')
     return sp.expand(a * x**2 + b * x + c)
 
 def complete_the_square(a, b, c):
-    """平方完成（変形後の式と頂点）"""
-    x = sp.symbols('x')
     h = -b / (2 * a)
     k = a * h**2 + b * h + c
     return a * (x - h)**2 + k, h, k
 
 def compare_expressions(user_input, correct_expr):
-    """ユーザーの入力と正解を比較"""
-    x = sp.symbols('x')
     try:
         user_expr = sp.sympify(user_input.replace("^", "**"))
         return sp.simplify(user_expr - correct_expr) == 0
@@ -51,11 +42,10 @@ def compare_expressions(user_input, correct_expr):
         return False
 
 def plot_graph(a, b, c):
-    """2次関数のグラフを表示"""
-    x = np.linspace(-10, 10, 400)
-    y = a * x**2 + b * x + c
     fig, ax = plt.subplots()
-    ax.plot(x, y, label=f"f(x) = {a}x² + {b}x + {c}")
+    xx = np.linspace(-10, 10, 400)
+    yy = a * xx**2 + b * xx + c
+    ax.plot(xx, yy, label=f'f(x) = {a}x² + {b}x + {c}')
     ax.axhline(0, color='black', linewidth=0.5)
     ax.axvline(0, color='black', linewidth=0.5)
     ax.set_title("f(x) のグラフ")
@@ -66,12 +56,10 @@ def plot_graph(a, b, c):
     st.pyplot(fig)
     plt.close()
 
-# --- UI 設定 ---
-
+# --- UI設定 ---
 st.set_page_config(page_title="平方完成トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング")
 
-# サイドバー設定
 with st.sidebar:
     st.header("設定")
     difficulty = st.radio("難易度", ["初級", "中級", "上級"])
@@ -79,7 +67,7 @@ with st.sidebar:
     show_graph = st.checkbox("グラフを表示する", value=True)
     total_questions = st.number_input("問題数", 1, 20, 5)
 
-# --- セッション初期化 ---
+# --- セッション状態初期化 ---
 if "questions" not in st.session_state:
     st.session_state.questions = []
     st.session_state.current_index = 0
@@ -88,7 +76,7 @@ if "questions" not in st.session_state:
     st.session_state.start_time = None
     st.session_state.completed = False
 
-# --- 問題を生成（初回のみ） ---
+# --- 問題生成 ---
 if not st.session_state.questions:
     for _ in range(total_questions):
         st.session_state.questions.append(generate_question(difficulty))
@@ -97,7 +85,6 @@ if not st.session_state.questions:
 # --- 現在の問題 ---
 index = st.session_state.current_index
 a, b, c = st.session_state.questions[index]
-x = sp.symbols('x')
 question_expr = format_quadratic(a, b, c)
 correct_expr, h, k = complete_the_square(a, b, c)
 
@@ -113,8 +100,8 @@ if time_limit > 0:
     remaining = time_limit - elapsed
     st.info(f"⏱ 残り時間: {remaining} 秒")
     if remaining <= 0:
-        st.warning("時間切れ！自動スキップされました。")
-        st.session_state.user_answers.append("（未回答）")
+        st.warning("時間切れ！スキップします。")
+        st.session_state.user_answers.append("（時間切れ）")
         st.session_state.results.append(False)
         st.session_state.current_index += 1
         if st.session_state.current_index >= total_questions:
@@ -156,13 +143,17 @@ with col2:
             st.session_state.start_time = time.time()
         st.experimental_rerun()
 
-# --- 結果表示 ---
+# --- 結果 ---
 if st.session_state.completed:
     st.header("📝 結果")
     score = sum(st.session_state.results)
     st.success(f"スコア: {score} / {int(total_questions)}")
 
-    for i, ((a, b, c), user_ans, result) in enumerate(zip(st.session_state.questions, st.session_state.user_answers, st.session_state.results)):
+    for i, ((a, b, c), user_ans, result) in enumerate(zip(
+            st.session_state.questions,
+            st.session_state.user_answers,
+            st.session_state.results)):
+
         expr = format_quadratic(a, b, c)
         correct_expr, _, _ = complete_the_square(a, b, c)
         st.markdown(f"### 第 {i+1} 問")
@@ -174,6 +165,6 @@ if st.session_state.completed:
         st.markdown("---")
 
     if st.button("もう一度やる"):
-        for key in st.session_state.keys():
+        for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.experimental_rerun()
