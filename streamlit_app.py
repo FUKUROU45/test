@@ -111,6 +111,7 @@ if "initialized" not in st.session_state:
         st.session_state.current_index = 0
         st.session_state.user_answers = []
         st.session_state.results = []
+        st.session_state.explanations = []  # 解説用のリスト
         st.session_state.completed = False
         st.session_state.start_time = time.time()
         st.session_state.initialized = True
@@ -122,10 +123,11 @@ else:
         score = sum(st.session_state.results)
         st.success(f"あなたのスコア: {score} / {st.session_state.total_questions}")
 
-        for i, ((a, b, c), user_ans, result) in enumerate(zip(
+        for i, ((a, b, c), user_ans, result, explanation) in enumerate(zip(
             st.session_state.questions,
             st.session_state.user_answers,
-            st.session_state.results
+            st.session_state.results,
+            st.session_state.explanations  # 解説
         )):
             expr = format_quadratic(a, b, c)
             a_c, h, k = complete_the_square(a, b, c)
@@ -137,13 +139,13 @@ else:
             st.write("判定:", "✅ 正解" if result else "❌ 不正解")
             if not result:
                 st.write(f"正しい平方完成: `{correct_str}`")
+            st.write("解説:", explanation)  # 解説を表示
             st.markdown("---")
 
         if st.button("もう一度やる"):
             for key in list(st.session_state.keys()):
                 del st.session_state[key]
-            st.experimental_rerun()
-
+            st.stop()  # アプリケーションを再度初期化する
     else:
         index = st.session_state.current_index
         a, b, c = st.session_state.questions[index]
@@ -167,6 +169,7 @@ else:
                 st.warning("時間切れです！この問題はスキップされました。")
                 st.session_state.user_answers.append("（時間切れ）")
                 st.session_state.results.append(False)
+                st.session_state.explanations.append("時間切れで解答できませんでした。")
                 st.session_state.current_index += 1
                 if st.session_state.current_index >= st.session_state.total_questions:
                     st.session_state.completed = True
@@ -179,6 +182,7 @@ else:
             is_correct = (st.session_state[f"choice_{index}"] == correct)
             st.session_state.user_answers.append(st.session_state[f"choice_{index}"])
             st.session_state.results.append(is_correct)
+            st.session_state.explanations.append(f"正しい平方完成式: `{correct}`")  # 解説を追加
             st.session_state.current_index += 1
             if st.session_state.current_index >= st.session_state.total_questions:
                 st.session_state.completed = True
@@ -188,18 +192,4 @@ else:
         def skip_question():
             st.session_state.user_answers.append("（スキップ）")
             st.session_state.results.append(False)
-            st.session_state.current_index += 1
-            if st.session_state.current_index >= st.session_state.total_questions:
-                st.session_state.completed = True
-            else:
-                st.session_state.start_time = time.time()
-
-        col1, col2 = st.columns(2)
-        with col1:
-            st.button("判定", on_click=check_answer)
-        with col2:
-            st.button("スキップ", on_click=skip_question)
-
-# 初期化されていなければUIを止める
-if "initialized" not in st.session_state:
-    st.stop()
+            st.session_state.explanations.append("解答をスキップしました。") 
