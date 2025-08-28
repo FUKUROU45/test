@@ -81,9 +81,11 @@ def plot_graph(a, b, c):
     xx = np.linspace(-10, 10, 400)
     yy = a * xx**2 + b * xx + c
     fig, ax = plt.subplots()
-    ax.plot(xx, yy, label=f'f(x) = {a}x² + {b}x + {c}')
+    ax.plot(xx, yy, label=f'f(x) = {a}x² + {b}x + {c}', color='b')
     ax.axhline(0, color='gray', lw=0.5)
     ax.axvline(0, color='gray', lw=0.5)
+    ax.set_xlabel("x軸")
+    ax.set_ylabel("f(x)軸")
     ax.grid(True)
     ax.legend()
     st.pyplot(fig)
@@ -112,6 +114,7 @@ if "initialized" not in st.session_state:
             st.session_state.completed = False
             st.session_state.start_time = time.time()
             st.session_state.initialized = True
+            # 問題設定後に再実行を行う
             st.experimental_rerun()
     st.stop()
 
@@ -139,6 +142,7 @@ if st.session_state.completed:
         st.markdown("---")
 
     if st.button("もう一度やる"):
+        # セッション状態をリセットして再実行
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.experimental_rerun()
@@ -196,7 +200,7 @@ def skip_question():
     else:
         st.session_state.start_time = time.time()
 
-col1, col2 = st.columns(2)
+col1, col2 = st.columns([1, 1])
 with col1:
     st.button("判定", on_click=check_answer)
 with col2:
