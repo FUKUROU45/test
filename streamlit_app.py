@@ -178,6 +178,7 @@ else:
 
         user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=f"choice_{index}")
 
+        # 解答をチェック
         def check_answer():
             is_correct = (st.session_state[f"choice_{index}"] == correct)
             st.session_state.user_answers.append(st.session_state[f"choice_{index}"])
@@ -189,7 +190,9 @@ else:
             else:
                 st.session_state.start_time = time.time()
 
+        # スキップ処理
         def skip_question():
             st.session_state.user_answers.append("（スキップ）")
             st.session_state.results.append(False)
-            st.session_state.explanations.append("解答をスキップしました。") 
+            st.session_state.explanations.append("解答をスキップしました。")
+            st.session_state.current_index
