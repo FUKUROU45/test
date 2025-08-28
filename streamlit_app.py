@@ -114,7 +114,6 @@ if "initialized" not in st.session_state:
             st.session_state.completed = False
             st.session_state.start_time = time.time()
             st.session_state.initialized = True
-            # 問題設定後に再実行を行う
             st.experimental_rerun()
     st.stop()
 
@@ -142,7 +141,6 @@ if st.session_state.completed:
         st.markdown("---")
 
     if st.button("もう一度やる"):
-        # セッション状態をリセットして再実行
         for key in list(st.session_state.keys()):
             del st.session_state[key]
         st.experimental_rerun()
@@ -167,7 +165,6 @@ if time_limit > 0:
     remaining = int(time_limit - elapsed)
     st.info(f"⏱ 残り時間: {remaining} 秒")
     if remaining <= 0:
-        # 自動スキップ処理
         st.warning("時間切れです！この問題はスキップされました。")
         st.session_state.user_answers.append("（時間切れ）")
         st.session_state.results.append(False)
@@ -189,3 +186,21 @@ def check_answer():
     if st.session_state.current_index >= st.session_state.total_questions:
         st.session_state.completed = True
     else:
+        st.session_state.start_time = time.time()
+    st.experimental_rerun()
+
+def skip_question():
+    st.session_state.user_answers.append("（スキップ）")
+    st.session_state.results.append(False)
+    st.session_state.current_index += 1
+    if st.session_state.current_index >= st.session_state.total_questions:
+        st.session_state.completed = True
+    else:
+        st.session_state.start_time = time.time()
+    st.experimental_rerun()
+
+col1, col2 = st.columns(2)
+with col1:
+    st.button("判定", on_click=check_answer)
+with col2:
+    st.button("スキップ", on_click=skip_question)
