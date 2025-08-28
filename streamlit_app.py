@@ -189,19 +189,3 @@ def check_answer():
     if st.session_state.current_index >= st.session_state.total_questions:
         st.session_state.completed = True
     else:
-        st.session_state.start_time = time.time()
-
-def skip_question():
-    st.session_state.user_answers.append("（スキップ）")
-    st.session_state.results.append(False)
-    st.session_state.current_index += 1
-    if st.session_state.current_index >= st.session_state.total_questions:
-        st.session_state.completed = True
-    else:
-        st.session_state.start_time = time.time()
-
-col1, col2 = st.columns([1, 1])
-with col1:
-    st.button("判定", on_click=check_answer)
-with col2:
-    st.button("スキップ", on_click=skip_question)
