@@ -81,11 +81,9 @@ def plot_graph(a, b, c):
     xx = np.linspace(-10, 10, 400)
     yy = a * xx**2 + b * xx + c
     fig, ax = plt.subplots()
-    ax.plot(xx, yy, label=f'f(x) = {a}x² + {b}x + {c}', color='b')
+    ax.plot(xx, yy, label=f'f(x) = {a}x² + {b}x + {c}')
     ax.axhline(0, color='gray', lw=0.5)
     ax.axvline(0, color='gray', lw=0.5)
-    ax.set_xlabel("x軸")
-    ax.set_ylabel("f(x)軸")
     ax.grid(True)
     ax.legend()
     st.pyplot(fig)
@@ -98,7 +96,7 @@ def plot_graph(a, b, c):
 st.set_page_config(page_title="平方完成 四択トレーニング", layout="centered")
 st.title("📘 平方完成トレーニング（四択・整数）")
 
-# 初期設定画面
+# 初期設定画面（初期化されていなければ表示）
 if "initialized" not in st.session_state:
     with st.sidebar:
         st.header("▶ 設定")
@@ -116,94 +114,92 @@ if "initialized" not in st.session_state:
         st.session_state.completed = False
         st.session_state.start_time = time.time()
         st.session_state.initialized = True
-        st.experimental_rerun()
+else:
+    # ここから問題や結果の画面処理
+
+    if st.session_state.completed:
+        st.header("📝 結果")
+        score = sum(st.session_state.results)
+        st.success(f"あなたのスコア: {score} / {st.session_state.total_questions}")
+
+        for i, ((a, b, c), user_ans, result) in enumerate(zip(
+            st.session_state.questions,
+            st.session_state.user_answers,
+            st.session_state.results
+        )):
+            expr = format_quadratic(a, b, c)
+            a_c, h, k = complete_the_square(a, b, c)
+            correct_str = format_expr(h, k, a_c)
+
+            st.markdown(f"### 第 {i+1} 問")
+            st.latex(f"f(x) = {sp.latex(expr)}")
+            st.write(f"あなたの答え: `{user_ans}`")
+            st.write("判定:", "✅ 正解" if result else "❌ 不正解")
+            if not result:
+                st.write(f"正しい平方完成: `{correct_str}`")
+            st.markdown("---")
+
+        if st.button("もう一度やる"):
+            for key in list(st.session_state.keys()):
+                del st.session_state[key]
+            st.experimental_rerun()
+
     else:
-        st.stop()
-
-# 終了画面
-if st.session_state.completed:
-    st.header("📝 結果")
-    score = sum(st.session_state.results)
-    st.success(f"あなたのスコア: {score} / {st.session_state.total_questions}")
-
-    for i, ((a, b, c), user_ans, result) in enumerate(zip(
-        st.session_state.questions,
-        st.session_state.user_answers,
-        st.session_state.results
-    )):
+        index = st.session_state.current_index
+        a, b, c = st.session_state.questions[index]
         expr = format_quadratic(a, b, c)
-        a_c, h, k = complete_the_square(a, b, c)
-        correct_str = format_expr(h, k, a_c)
+        choices, correct = generate_choices(a, b, c)
 
-        st.markdown(f"### 第 {i+1} 問")
+        st.markdown(f"### 問題 {index + 1} / {st.session_state.total_questions}")
         st.latex(f"f(x) = {sp.latex(expr)}")
-        st.write(f"あなたの答え: `{user_ans}`")
-        st.write("判定:", "✅ 正解" if result else "❌ 不正解")
-        if not result:
-            st.write(f"正しい平方完成: `{correct_str}`")
-        st.markdown("---")
 
-    if st.button("もう一度やる"):
-        for key in list(st.session_state.keys()):
-            del st.session_state[key]
-        st.experimental_rerun()
+        if st.session_state.show_graph:
+            plot_graph(a, b, c)
+
+        # 制限時間処理
+        time_limit = st.session_state.time_limit
+        if time_limit > 0:
+            elapsed = time.time() - st.session_state.start_time
+            remaining = int(time_limit - elapsed)
+            st.info(f"⏱ 残り時間: {remaining} 秒")
+            if remaining <= 0:
+                # 時間切れ時処理
+                st.warning("時間切れです！この問題はスキップされました。")
+                st.session_state.user_answers.append("（時間切れ）")
+                st.session_state.results.append(False)
+                st.session_state.current_index += 1
+                if st.session_state.current_index >= st.session_state.total_questions:
+                    st.session_state.completed = True
+                else:
+                    st.session_state.start_time = time.time()
+
+        user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=f"choice_{index}")
+
+        def check_answer():
+            is_correct = (st.session_state[f"choice_{index}"] == correct)
+            st.session_state.user_answers.append(st.session_state[f"choice_{index}"])
+            st.session_state.results.append(is_correct)
+            st.session_state.current_index += 1
+            if st.session_state.current_index >= st.session_state.total_questions:
+                st.session_state.completed = True
+            else:
+                st.session_state.start_time = time.time()
+
+        def skip_question():
+            st.session_state.user_answers.append("（スキップ）")
+            st.session_state.results.append(False)
+            st.session_state.current_index += 1
+            if st.session_state.current_index >= st.session_state.total_questions:
+                st.session_state.completed = True
+            else:
+                st.session_state.start_time = time.time()
+
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button("判定", on_click=check_answer)
+        with col2:
+            st.button("スキップ", on_click=skip_question)
+
+# 初期化されていなければUIを止める
+if "initialized" not in st.session_state:
     st.stop()
-
-# 現在の問題
-index = st.session_state.current_index
-a, b, c = st.session_state.questions[index]
-expr = format_quadratic(a, b, c)
-choices, correct = generate_choices(a, b, c)
-
-st.markdown(f"### 問題 {index + 1} / {st.session_state.total_questions}")
-st.latex(f"f(x) = {sp.latex(expr)}")
-
-if st.session_state.show_graph:
-    plot_graph(a, b, c)
-
-# 制限時間処理
-time_limit = st.session_state.time_limit
-if time_limit > 0:
-    elapsed = time.time() - st.session_state.start_time
-    remaining = int(time_limit - elapsed)
-    st.info(f"⏱ 残り時間: {remaining} 秒")
-    if remaining <= 0:
-        st.warning("時間切れです！この問題はスキップされました。")
-        st.session_state.user_answers.append("（時間切れ）")
-        st.session_state.results.append(False)
-        st.session_state.current_index += 1
-        if st.session_state.current_index >= st.session_state.total_questions:
-            st.session_state.completed = True
-        else:
-            st.session_state.start_time = time.time()
-        st.experimental_rerun()
-
-# 四択の選択肢をラジオボタンで表示
-user_choice = st.radio("平方完成の正しい式を選んでください", choices, key=f"choice_{index}")
-
-def check_answer():
-    is_correct = (st.session_state[f"choice_{index}"] == correct)
-    st.session_state.user_answers.append(st.session_state[f"choice_{index}"])
-    st.session_state.results.append(is_correct)
-    st.session_state.current_index += 1
-    if st.session_state.current_index >= st.session_state.total_questions:
-        st.session_state.completed = True
-    else:
-        st.session_state.start_time = time.time()
-    st.experimental_rerun()
-
-def skip_question():
-    st.session_state.user_answers.append("（スキップ）")
-    st.session_state.results.append(False)
-    st.session_state.current_index += 1
-    if st.session_state.current_index >= st.session_state.total_questions:
-        st.session_state.completed = True
-    else:
-        st.session_state.start_time = time.time()
-    st.experimental_rerun()
-
-col1, col2 = st.columns(2)
-with col1:
-    st.button("判定", on_click=check_answer)
-with col2:
-    st.button("スキップ", on_click=skip_question)
