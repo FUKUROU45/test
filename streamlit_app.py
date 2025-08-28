@@ -106,16 +106,19 @@ if "initialized" not in st.session_state:
         st.session_state.total_questions = st.number_input("問題数", min_value=1, max_value=20, value=5)
         st.session_state.show_graph = st.radio("グラフを表示しますか？", ["表示する", "表示しない"]) == "表示する"
         st.session_state.time_limit = st.selectbox("制限時間（秒）", [0, 15, 30, 60], index=2)
-        if st.button("問題を開始"):
-            st.session_state.questions = [generate_question(st.session_state.difficulty) for _ in range(st.session_state.total_questions)]
-            st.session_state.current_index = 0
-            st.session_state.user_answers = []
-            st.session_state.results = []
-            st.session_state.completed = False
-            st.session_state.start_time = time.time()
-            st.session_state.initialized = True
-            st.experimental_rerun()
-    st.stop()
+        start_clicked = st.button("問題を開始")
+
+    if start_clicked:
+        st.session_state.questions = [generate_question(st.session_state.difficulty) for _ in range(st.session_state.total_questions)]
+        st.session_state.current_index = 0
+        st.session_state.user_answers = []
+        st.session_state.results = []
+        st.session_state.completed = False
+        st.session_state.start_time = time.time()
+        st.session_state.initialized = True
+        st.experimental_rerun()
+    else:
+        st.stop()
 
 # 終了画面
 if st.session_state.completed:
