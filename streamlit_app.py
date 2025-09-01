@@ -1,541 +1,573 @@
 import streamlit as st
+import random
 import re
-import math
 
 def main():
-    st.title("🧮 四則演算計算機")
-    st.write("レベル別計算機アプリです")
+    st.title("📚 四則演算学習アプリ")
+    st.write("問題を解いて計算力を鍛えよう！")
     
-    # サイドバーでレベルと計算方法を選択
+    # サイドバーでレベルを選択
     st.sidebar.header("設定")
     level = st.sidebar.selectbox(
         "レベルを選択してください",
         ["初級", "中級", "上級"]
     )
     
-    calc_mode = st.sidebar.selectbox(
-        "計算モードを選択してください",
-        ["基本計算", "連続計算", "履歴付き計算"]
-    )
+    # セッション状態の初期化
+    if 'score' not in st.session_state:
+        st.session_state.score = 0
+    if 'total_problems' not in st.session_state:
+        st.session_state.total_problems = 0
+    if 'current_problem' not in st.session_state:
+        st.session_state.current_problem = None
+    if 'correct_answer' not in st.session_state:
+        st.session_state.correct_answer = None
+    if 'answered' not in st.session_state:
+        st.session_state.answered = False
     
     # レベル説明
     show_level_info(level)
     
-    if calc_mode == "基本計算":
-        basic_calculator(level)
-    elif calc_mode == "連続計算":
-        continuous_calculator(level)
-    else:
-        history_calculator(level)
+    # スコア表示
+    if st.session_state.total_problems > 0:
+        accuracy = (st.session_state.score / st.session_state.total_problems) * 100
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.metric("正解数", st.session_state.score)
+        with col2:
+            st.metric("問題数", st.session_state.total_problems)
+        with col3:
+            st.metric("正解率", f"{accuracy:.1f}%")
+    
+    # 問題生成・表示
+    show_problem(level)
 
 def show_level_info(level):
     """レベル情報を表示"""
     if level == "初級":
-        st.info("🟢 **初級**: 基本的な四則演算（+, -, ×, ÷）")
+        st.info("🟢 **初級**: 一桁の数での四則演算（+, -, ×, ÷）")
     elif level == "中級":
-        st.info("🟡 **中級**: 四則演算 + 累乗（^）+ 平方根（√）")
+        st.info("🟡 **中級**: 二桁の数での四則演算 + 累乗（^）")
     else:
-        st.info("🔴 **上級**: 文字式の計算（x, y使用可）+ 全ての演算")
+        st.info("🔴 **上級**: 文字式の計算問題（x, yを含む式）")
 
-def basic_calculator(level):
-    """基本的な四則演算"""
-    st.header("基本計算")
+def show_problem(level):
+    """問題を生成・表示"""
+    st.header("問題")
     
-    if level == "上級":
-        # 上級：式入力モード
-        st.subheader("式を入力してください")
-        st.write("例: 2*x + 3, x^2 + 2*x + 1, (x+1)*(x-1)")
+    # 新しい問題を生成
+    if st.button("新しい問題", type="primary") or st.session_state.current_problem is None:
+        st.session_state.current_problem, st.session_state.correct_answer = generate_problem(level)
+        st.session_state.answered = False
+        st.rerun()
+    
+    # 問題表示
+    if st.session_state.current_problem:
+        st.subheader("問題:")
+        st.markdown(f"### {st.session_state.current_problem}")
         
-        expression = st.text_input("計算式", placeholder="例: 2*x + 3")
-        x_value = st.number_input("xの値", value=1.0, format="%.2f")
-        y_value = st.number_input("yの値（使用する場合）", value=1.0, format="%.2f")
+        if level == "上級":
+            # 上級では文字式なので答えも式の場合がある
+            user_answer = st.text_input("答えを入力してください", key="answer_input", disabled=st.session_state.answered)
+        else:
+            # 初級・中級では数値回答
+            user_answer = st.number_input("答えを入力してください", format="%.2f", key="answer_input", disabled=st.session_state.answered)
         
-        if st.button("計算実行", type="primary"):
-            if expression:
-                result = calculate_expression(expression, x_value, y_value)
-                if result is not None:
-                    st.success(f"結果: {expression} (x={x_value}, y={y_value}) = **{result}**")
-                else:
-                    st.error("式の計算でエラーが発生しました")
-            else:
-                st.warning("計算式を入力してください")
+        if st.button("回答", disabled=st.session_state.answered):
+            check_answer(user_answer, level)
+            st.session_state.answered = True
+            st.rerun()
+        
+        # 回答後のフィードバック表示
+        if st.session_state.answered:
+            show_feedback(user_answer, level)
+
+def generate_problem(level):
+    """レベルに応じた問題を生成"""
+    if level == "初級":
+        return generate_basic_problem()
+    elif level == "中級":
+        return generate_intermediate_problem()
     else:
-        # 初級・中級：通常モード
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            num1 = st.number_input("数値1", value=0.0, format="%.2f")
-        
-        with col2:
-            if level == "初級":
-                operations = ["+", "-", "×", "÷"]
-            else:  # 中級
-                operations = ["+", "-", "×", "÷", "^", "√"]
-            operation = st.selectbox("演算子", operations)
-        
-        with col3:
-            if operation == "√":
-                st.write("√の計算（数値1の平方根）")
-                num2 = None
-            else:
-                num2 = st.number_input("数値2", value=0.0, format="%.2f")
-        
-        if st.button("計算実行", type="primary"):
-            result = calculate(num1, operation, num2)
-            if result is not None:
-                if operation == "√":
-                    st.success(f"結果: √{num1} = **{result}**")
-                else:
-                    st.success(f"結果: {num1} {operation} {num2} = **{result}**")
-            else:
-                st.error("計算エラーが発生しました")
+        return generate_advanced_problem()
 
-def continuous_calculator(level):
-    """連続計算モード"""
-    st.header("連続計算")
+def generate_basic_problem():
+    """初級問題生成（一桁）"""
+    operations = ["+", "-", "×", "÷"]
+    operation = random.choice(operations)
     
-    # セッション状態の初期化
-    if 'current_value' not in st.session_state:
-        st.session_state.current_value = 0.0
-    if 'display_calculation' not in st.session_state:
-        st.session_state.display_calculation = "0"
-    
-    # 現在の値を表示
-    st.metric("現在の値", st.session_state.current_value)
-    st.code(st.session_state.display_calculation)
-    
-    if level == "上級":
-        # 上級：式入力モード
-        st.subheader("現在の値を使った式計算")
-        st.write("現在の値をxとして使用します")
-        
-        expression = st.text_input("計算式", placeholder="例: x + 5, x^2, 2*x + 3")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("計算", type="primary"):
-                if expression:
-                    # 現在の値をxとして代入
-                    result = calculate_expression(expression, st.session_state.current_value, 0)
-                    if result is not None:
-                        st.session_state.display_calculation += f" → {expression.replace('x', str(st.session_state.current_value))} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("式の計算でエラーが発生しました")
-                else:
-                    st.warning("計算式を入力してください")
-        
-        with col2:
-            if st.button("クリア"):
-                st.session_state.current_value = 0.0
-                st.session_state.display_calculation = "0"
-                st.rerun()
+    if operation == "÷":
+        # 割り切れる数を生成
+        num2 = random.randint(1, 9)
+        result = random.randint(1, 9)
+        num1 = num2 * result
+        problem = f"{num1} ÷ {num2}"
+        answer = result
     else:
-        # 初級・中級：通常モード
-        col1, col2 = st.columns(2)
+        num1 = random.randint(1, 9)
+        num2 = random.randint(1, 9)
         
-        with col1:
-            if level == "初級":
-                operations = ["+", "-", "×", "÷"]
-            else:  # 中級
-                operations = ["+", "-", "×", "÷", "^", "√"]
-            operation = st.selectbox("演算子", operations, key="cont_op")
-            
-            if operation != "√":
-                num = st.number_input("数値", value=0.0, format="%.2f", key="cont_num")
-            else:
-                num = None
-        
-        with col2:
-            if st.button("計算", type="primary"):
-                if operation == "√":
-                    result = math.sqrt(st.session_state.current_value) if st.session_state.current_value >= 0 else None
-                    if result is not None:
-                        st.session_state.display_calculation += f" → √{st.session_state.current_value} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("負の数の平方根は計算できません")
-                else:
-                    result = calculate(st.session_state.current_value, operation, num)
-                    if result is not None:
-                        st.session_state.display_calculation += f" {operation} {num} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("計算エラーが発生しました")
-            
-            if st.button("クリア"):
-                st.session_state.current_value = 0.0
-                st.session_state.display_calculation = "0"
-                st.rerun()
-
-def history_calculator(level):
-    """履歴付き計算"""
-    st.header("履歴付き計算")
-    
-    # 履歴の初期化
-    if 'calculation_history' not in st.session_state:
-        st.session_state.calculation_history = []
-    
-    if level == "上級":
-        # 上級：式入力モード
-        st.subheader("式を入力してください")
-        expression = st.text_input("計算式", placeholder="例: 2*x^2 + 3*x + 1", key="hist_expr")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            x_value = st.number_input("xの値", value=1.0, format="%.2f", key="hist_x")
-        with col2:
-            y_value = st.number_input("yの値", value=1.0, format="%.2f", key="hist_y")
-        
-        col_calc, col_clear = st.columns(2)
-        
-        with col_calc:
-            if st.button("計算実行", type="primary", key="hist_calc_adv"):
-                if expression:
-                    result = calculate_expression(expression, x_value, y_value)
-                    if result is not None:
-                        calculation = f"{expression} (x={x_value}, y={y_value}) = {result}"
-                        st.session_state.calculation_history.append(calculation)
-                        st.success(f"結果: **{result}**")
-                        st.rerun()
-                    else:
-                        st.error("式の計算でエラーが発生しました")
-                else:
-                    st.warning("計算式を入力してください")
-        
-        with col_clear:
-            if st.button("履歴クリア", key="hist_clear_adv"):
-                st.session_state.calculation_history = []
-                st.rerun()
-    else:
-        # 初級・中級：通常モード
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            num1 = st.number_input("数値1", value=0.0, format="%.2f", key="hist_num1")
-        
-        with col2:
-            if level == "初級":
-                operations = ["+", "-", "×", "÷"]
-            else:  # 中級
-                operations = ["+", "-", "×", "÷", "^", "√"]
-            operation = st.selectbox("演算子", operations, key="hist_op")
-        
-        with col3:
-            if operation == "√":
-                st.write("√の計算（数値1の平方根）")
-                num2 = None
-            else:
-                num2 = st.number_input("数値2", value=0.0, format="%.2f", key="hist_num2")
-        
-        col_calc, col_clear = st.columns(2)
-        
-        with col_calc:
-            if st.button("計算実行", type="primary", key="hist_calc"):
-                result = calculate(num1, operation, num2)
-                if result is not None:
-                    if operation == "√":
-                        calculation = f"√{num1} = {result}"
-                    else:
-                        calculation = f"{num1} {operation} {num2} = {result}"
-                    st.session_state.calculation_history.append(calculation)
-                    st.success(f"結果: **{result}**")
-                    st.rerun()
-                else:
-                    st.error("計算エラーが発生しました")
-        
-        with col_clear:
-            if st.button("履歴クリア"):
-                st.session_state.calculation_history = []
-                st.rerun()
-    
-    # 履歴表示
-    if st.session_state.calculation_history:
-        st.subheader("計算履歴")
-        for i, calc in enumerate(reversed(st.session_state.calculation_history[-10:]), 1):
-            st.write(f"{i}. {calc}")
-
-def calculate(num1, operation, num2):
-    """四則演算を実行"""
-    try:
         if operation == "+":
-            return num1 + num2
+            problem = f"{num1} + {num2}"
+            answer = num1 + num2
         elif operation == "-":
-            return num1 - num2
+            # 負の数を避けるため大きい数から小さい数を引く
+            if num1 < num2:
+                num1, num2 = num2, num1
+            problem = f"{num1} - {num2}"
+            answer = num1 - num2
         elif operation == "×":
-            return num1 * num2
-        elif operation == "÷":
-            if num2 == 0:
-                return None
-            return num1 / num2
-        elif operation == "^":
-            return num1 ** num2
-        elif operation == "√":
-            if num1 < 0:
-                return None
-            return math.sqrt(num1)
-    except Exception:
-        return None
-
-def calculate_expression(expression, x_value, y_value=0):
-    """文字式を計算"""
-    try:
-        # 式を安全な形に変換
-        safe_expr = prepare_expression(expression, x_value, y_value)
-        if safe_expr is None:
-            return None
-        
-        # 計算実行
-        result = eval(safe_expr)
-        return round(result, 6)  # 小数点以下6桁で丸める
-    except Exception:
-        return None
-
-def prepare_expression(expression, x_value, y_value):
-    """式を安全に評価できる形に変換"""
-    try:
-        # 小文字に統一
-        expr = expression.lower().replace(" ", "")
-        
-        # 危険な関数や文字をチェック
-        forbidden = ['import', 'exec', 'eval', '__', 'open', 'file']
-        if any(word in expr for word in forbidden):
-            return None
-        
-        # 変数を値で置換
-        expr = expr.replace('x', str(x_value))
-        expr = expr.replace('y', str(y_value))
-        
-        # ^を**に変換（累乗）
-        expr = expr.replace('^', '**')
-        
-        # √を数学関数に変換
-        expr = re.sub(r'√\(([^)]+)\)', r'math.sqrt(\1)', expr)
-        expr = re.sub(r'√(\d+(?:\.\d+)?)', r'math.sqrt(\1)', expr)
-        
-        # 暗黙の乗算を明示的に（例：2x → 2*x）
-        expr = re.sub(r'(\d)([a-z])', r'\1*\2', expr)
-        expr = re.sub(r'([a-z])(\d)', r'\1*\2', expr)
-        expr = re.sub(r'(\))(\()', r'\1*\2', expr)
-        expr = re.sub(r'(\d)(\()', r'\1*\2', expr)
-        expr = re.sub(r'(\))(\d)', r'\1*\2', expr)
-        
-        # 許可された文字のみかチェック
-        allowed_chars = set('0123456789+-*/.()** ')
-        if not all(c in allowed_chars or c.isspace() for c in expr.replace('math.sqrt', '')):
-            # math.sqrt部分を除いて文字チェック
-            clean_expr = expr.replace('math.sqrt', '')
-            if not all(c in allowed_chars for c in clean_expr):
-                return None
-        
-        return expr
-    except Exception:
-        return None
-
-def continuous_calculator(level):
-    """連続計算モード"""
-    st.header("連続計算")
+            problem = f"{num1} × {num2}"
+            answer = num1 * num2
     
-    # セッション状態の初期化
-    if 'current_value' not in st.session_state:
-        st.session_state.current_value = 0.0
-    if 'display_calculation' not in st.session_state:
-        st.session_state.display_calculation = "0"
+    return problem, answer
+
+def generate_intermediate_problem():
+    """中級問題生成（二桁 + 累乗）"""
+    problem_types = ["basic", "power"]
+    problem_type = random.choice(problem_types)
     
-    # 現在の値を表示
-    st.metric("現在の値", st.session_state.current_value)
-    st.code(st.session_state.display_calculation)
+    if problem_type == "power":
+        base = random.randint(2, 5)
+        exponent = random.randint(2, 3)
+        problem = f"{base}^{exponent}"
+        answer = base ** exponent
+    else:
+        operations = ["+", "-", "×", "÷"]
+        operation = random.choice(operations)
+        
+        if operation == "÷":
+            # 割り切れる数を生成
+            num2 = random.randint(2, 12)
+            result = random.randint(2, 15)
+            num1 = num2 * result
+            problem = f"{num1} ÷ {num2}"
+            answer = result
+        else:
+            num1 = random.randint(10, 50)
+            num2 = random.randint(2, 20)
+            
+            if operation == "+":
+                problem = f"{num1} + {num2}"
+                answer = num1 + num2
+            elif operation == "-":
+                if num1 < num2:
+                    num1, num2 = num2, num1
+                problem = f"{num1} - {num2}"
+                answer = num1 - num2
+            elif operation == "×":
+                num1 = random.randint(2, 12)
+                num2 = random.randint(2, 12)
+                problem = f"{num1} × {num2}"
+                answer = num1 * num2
+    
+    return problem, answer
+
+def generate_advanced_problem():
+    """上級問題生成（文字式）"""
+    problem_types = ["linear", "quadratic", "substitution"]
+    problem_type = random.choice(problem_types)
+    
+    if problem_type == "linear":
+        # 一次式の値を求める問題
+        a = random.randint(2, 5)
+        b = random.randint(1, 10)
+        x_val = random.randint(1, 5)
+        problem = f"{a}x + {b} の値を求めよ（x = {x_val}）"
+        answer = f"{a * x_val + b}"
+    
+    elif problem_type == "quadratic":
+        # 二次式の値を求める問題
+        a = random.randint(1, 3)
+        b = random.randint(1, 4)
+        c = random.randint(1, 5)
+        x_val = random.randint(1, 3)
+        problem = f"{a}x^2 + {b}x + {c} の値を求めよ（x = {x_val}）"
+        answer = f"{a * x_val**2 + b * x_val + c}"
+    
+    else:  # substitution
+        # 式の展開・計算
+        patterns = [
+            ("(x + a)(x + b)を展開せよ", "expand"),
+            ("ax + b = c のときのxの値", "solve"),
+            ("a*x + b*y の値を求めよ", "substitute")
+        ]
+        
+        pattern_type = random.choice(patterns)
+        
+        if "expand" in pattern_type[1]:
+            a = random.randint(1, 5)
+            b = random.randint(1, 5)
+            problem = f"(x + {a})(x + {b}) を展開せよ"
+            answer = f"x^2 + {a+b}x + {a*b}"
+        
+        elif "solve" in pattern_type[1]:
+            a = random.randint(2, 5)
+            c = random.randint(5, 20)
+            b = random.randint(1, 4)
+            x_answer = (c - b) / a
+            if x_answer == int(x_answer):
+                x_answer = int(x_answer)
+            problem = f"{a}x + {b} = {c} のときのxの値を求めよ"
+            answer = f"{x_answer}"
+        
+        else:  # substitute
+            a = random.randint(2, 4)
+            b = random.randint(2, 4)
+            x_val = random.randint(1, 5)
+            y_val = random.randint(1, 5)
+            problem = f"{a}x + {b}y の値を求めよ（x = {x_val}, y = {y_val}）"
+            answer = f"{a * x_val + b * y_val}"
+    
+    return problem, answer
+
+def check_answer(user_answer, level):
+    """回答をチェック"""
+    st.session_state.total_problems += 1
     
     if level == "上級":
-        # 上級：式入力モード
-        st.subheader("現在の値を使った式計算")
-        st.write("現在の値をxとして使用します")
+        # 文字式の場合は文字列比較（空白除去して正規化）
+        user_clean = str(user_answer).replace(" ", "").lower()
+        correct_clean = str(st.session_state.correct_answer).replace(" ", "").lower()
         
-        expression = st.text_input("計算式", placeholder="例: x + 5, x^2, 2*x + 3")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("計算", type="primary"):
-                if expression:
-                    # 現在の値をxとして代入
-                    result = calculate_expression(expression, st.session_state.current_value, 0)
-                    if result is not None:
-                        st.session_state.display_calculation += f" → {expression.replace('x', str(st.session_state.current_value))} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("式の計算でエラーが発生しました")
-                else:
-                    st.warning("計算式を入力してください")
-        
-        with col2:
-            if st.button("クリア"):
-                st.session_state.current_value = 0.0
-                st.session_state.display_calculation = "0"
-                st.rerun()
+        # 数値の場合は数値として比較
+        try:
+            user_num = float(user_answer)
+            correct_num = float(st.session_state.correct_answer)
+            is_correct = abs(user_num - correct_num) < 0.01
+        except:
+            # 文字式の場合
+            is_correct = user_clean == correct_clean
     else:
-        # 初級・中級：通常モード
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            if level == "初級":
-                operations = ["+", "-", "×", "÷"]
-            else:  # 中級
-                operations = ["+", "-", "×", "÷", "^", "√"]
-            operation = st.selectbox("演算子", operations, key="cont_op")
-            
-            if operation != "√":
-                num = st.number_input("数値", value=0.0, format="%.2f", key="cont_num")
-            else:
-                num = None
-        
-        with col2:
-            if st.button("計算", type="primary"):
-                if operation == "√":
-                    if st.session_state.current_value >= 0:
-                        result = math.sqrt(st.session_state.current_value)
-                        st.session_state.display_calculation += f" → √{st.session_state.current_value} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("負の数の平方根は計算できません")
-                else:
-                    result = calculate(st.session_state.current_value, operation, num)
-                    if result is not None:
-                        st.session_state.display_calculation += f" {operation} {num} = {result}"
-                        st.session_state.current_value = result
-                        st.rerun()
-                    else:
-                        st.error("計算エラーが発生しました")
-            
-            if st.button("クリア"):
-                st.session_state.current_value = 0.0
-                st.session_state.display_calculation = "0"
-                st.rerun()
-
-def history_calculator(level):
-    """履歴付き計算"""
-    st.header("履歴付き計算")
+        # 初級・中級は数値比較
+        try:
+            is_correct = abs(float(user_answer) - float(st.session_state.correct_answer)) < 0.01
+        except:
+            is_correct = False
     
-    # 履歴の初期化
-    if 'calculation_history' not in st.session_state:
-        st.session_state.calculation_history = []
+    if is_correct:
+        st.session_state.score += 1
+
+def show_feedback(user_answer, level):
+    """回答後のフィードバック表示"""
+    if level == "上級":
+        # 上級の判定
+        user_clean = str(user_answer).replace(" ", "").lower()
+        correct_clean = str(st.session_state.correct_answer).replace(" ", "").lower()
+        
+        try:
+            user_num = float(user_answer)
+            correct_num = float(st.session_state.correct_answer)
+            is_correct = abs(user_num - correct_num) < 0.01
+        except:
+            is_correct = user_clean == correct_clean
+    else:
+        # 初級・中級の判定
+        try:
+            is_correct = abs(float(user_answer) - float(st.session_state.correct_answer)) < 0.01
+        except:
+            is_correct = False
+    
+    if is_correct:
+        st.success(f"🎉 正解！ 答え: {st.session_state.correct_answer}")
+    else:
+        st.error(f"❌ 不正解　正解: {st.session_state.correct_answer}")
+        
+        # 上級の場合は解説を追加
+        if level == "上級":
+            show_explanation()
+
+def show_explanation():
+    """上級問題の解説表示"""
+    problem = st.session_state.current_problem
+    
+    with st.expander("💡 解説"):
+        if "展開" in problem:
+            st.write("**展開の手順:**")
+            st.write("1. (x + a)(x + b) = x² + ax + bx + ab")
+            st.write("2. = x² + (a+b)x + ab")
+            st.write("3. 係数を計算して整理する")
+        
+        elif "のときのx" in problem:
+            st.write("**一次方程式の解き方:**")
+            st.write("1. ax + b = c")
+            st.write("2. ax = c - b")
+            st.write("3. x = (c - b) / a")
+        
+        elif "値を求めよ" in problem and "x =" in problem:
+            st.write("**代入計算の手順:**")
+            st.write("1. 与えられた式にx, yの値を代入")
+            st.write("2. 四則演算の順序に従って計算")
+            st.write("3. 結果を求める")
+
+def show_practice_mode():
+    """練習モード選択"""
+    st.sidebar.markdown("---")
+    st.sidebar.header("練習設定")
+    
+    practice_type = st.sidebar.selectbox(
+        "練習タイプ",
+        ["ランダム", "加法のみ", "減法のみ", "乗法のみ", "除法のみ"]
+    )
+    
+    if st.sidebar.button("練習リセット"):
+        st.session_state.score = 0
+        st.session_state.total_problems = 0
+        st.session_state.current_problem = None
+        st.session_state.answered = False
+        st.rerun()
+    
+    return practice_type
+
+def generate_problem_by_type(level, practice_type):
+    """練習タイプに応じた問題生成"""
+    if practice_type == "加法のみ":
+        return generate_addition_problem(level)
+    elif practice_type == "減法のみ":
+        return generate_subtraction_problem(level)
+    elif practice_type == "乗法のみ":
+        return generate_multiplication_problem(level)
+    elif practice_type == "除法のみ":
+        return generate_division_problem(level)
+    else:
+        return generate_problem(level)
+
+def generate_addition_problem(level):
+    """加法問題生成"""
+    if level == "初級":
+        num1, num2 = random.randint(1, 9), random.randint(1, 9)
+    elif level == "中級":
+        num1, num2 = random.randint(10, 50), random.randint(10, 50)
+    else:  # 上級
+        a, b = random.randint(2, 5), random.randint(1, 10)
+        x_val = random.randint(1, 5)
+        problem = f"{a}x + {b} の値を求めよ（x = {x_val}）"
+        answer = a * x_val + b
+        return problem, answer
+    
+    problem = f"{num1} + {num2}"
+    answer = num1 + num2
+    return problem, answer
+
+def generate_subtraction_problem(level):
+    """減法問題生成"""
+    if level == "初級":
+        num1, num2 = random.randint(5, 9), random.randint(1, 4)
+    elif level == "中級":
+        num1, num2 = random.randint(20, 80), random.randint(10, 30)
+    else:  # 上級
+        a, b = random.randint(2, 8), random.randint(1, 5)
+        x_val = random.randint(2, 6)
+        problem = f"{a}x - {b} の値を求めよ（x = {x_val}）"
+        answer = a * x_val - b
+        return problem, answer
+    
+    problem = f"{num1} - {num2}"
+    answer = num1 - num2
+    return problem, answer
+
+def generate_multiplication_problem(level):
+    """乗法問題生成"""
+    if level == "初級":
+        num1, num2 = random.randint(2, 9), random.randint(2, 9)
+    elif level == "中級":
+        num1, num2 = random.randint(11, 25), random.randint(2, 12)
+    else:  # 上級
+        a, b = random.randint(2, 4), random.randint(2, 5)
+        x_val = random.randint(1, 4)
+        problem = f"{a}x × {b} の値を求めよ（x = {x_val}）"
+        answer = a * x_val * b
+        return problem, answer
+    
+    problem = f"{num1} × {num2}"
+    answer = num1 * num2
+    return problem, answer
+
+def generate_division_problem(level):
+    """除法問題生成"""
+    if level == "初級":
+        num2 = random.randint(2, 9)
+        result = random.randint(2, 9)
+        num1 = num2 * result
+    elif level == "中級":
+        num2 = random.randint(2, 15)
+        result = random.randint(3, 20)
+        num1 = num2 * result
+    else:  # 上級
+        a = random.randint(2, 6)
+        divisor = random.randint(2, 4)
+        x_val = random.randint(2, 5)
+        # 割り切れるようにする
+        numerator = a * divisor
+        problem = f"{numerator}x ÷ {divisor} の値を求めよ（x = {x_val}）"
+        answer = (numerator * x_val) // divisor
+        return problem, answer
+    
+    problem = f"{num1} ÷ {num2}"
+    answer = result
+    return problem, answer
+
+def generate_problem(level):
+    """ランダム問題生成"""
+    if level == "初級":
+        return generate_basic_problem()
+    elif level == "中級":
+        return generate_intermediate_problem()
+    else:
+        return generate_advanced_problem()
+
+def generate_intermediate_problem():
+    """中級問題生成（二桁 + 累乗）"""
+    problem_types = ["basic", "power"]
+    problem_type = random.choice(problem_types)
+    
+    if problem_type == "power":
+        base = random.randint(2, 5)
+        exponent = random.randint(2, 3)
+        problem = f"{base}^{exponent}"
+        answer = base ** exponent
+    else:
+        operations = ["+", "-", "×", "÷"]
+        operation = random.choice(operations)
+        
+        if operation == "÷":
+            num2 = random.randint(2, 12)
+            result = random.randint(3, 20)
+            num1 = num2 * result
+            problem = f"{num1} ÷ {num2}"
+            answer = result
+        else:
+            if operation == "×":
+                num1 = random.randint(11, 25)
+                num2 = random.randint(2, 12)
+            else:
+                num1 = random.randint(20, 80)
+                num2 = random.randint(10, 30)
+            
+            if operation == "+":
+                problem = f"{num1} + {num2}"
+                answer = num1 + num2
+            elif operation == "-":
+                if num1 < num2:
+                    num1, num2 = num2, num1
+                problem = f"{num1} - {num2}"
+                answer = num1 - num2
+            elif operation == "×":
+                problem = f"{num1} × {num2}"
+                answer = num1 * num2
+    
+    return problem, answer
+
+def generate_advanced_problem():
+    """上級問題生成（文字式）"""
+    problem_types = ["linear_sub", "quadratic_sub", "expand", "factorize"]
+    problem_type = random.choice(problem_types)
+    
+    if problem_type == "linear_sub":
+        # 一次式の値を求める
+        a = random.randint(2, 6)
+        b = random.randint(1, 10)
+        x_val = random.randint(1, 5)
+        problem = f"{a}x + {b} の値を求めよ（x = {x_val}）"
+        answer = str(a * x_val + b)
+    
+    elif problem_type == "quadratic_sub":
+        # 二次式の値を求める
+        a = random.randint(1, 3)
+        b = random.randint(1, 4)
+        c = random.randint(1, 5)
+        x_val = random.randint(1, 3)
+        problem = f"{a}x^2 + {b}x + {c} の値を求めよ（x = {x_val}）"
+        answer = str(a * x_val**2 + b * x_val + c)
+    
+    elif problem_type == "expand":
+        # 展開問題
+        a = random.randint(1, 5)
+        b = random.randint(1, 5)
+        problem = f"(x + {a})(x + {b}) を展開せよ"
+        answer = f"x^2+{a+b}x+{a*b}"
+    
+    else:  # factorize - 簡単な因数分解
+        # x^2 + bx + c = (x + p)(x + q) の形
+        p = random.randint(1, 4)
+        q = random.randint(1, 4)
+        b = p + q
+        c = p * q
+        problem = f"x^2 + {b}x + {c} を因数分解せよ"
+        answer = f"(x+{p})(x+{q})"
+    
+    return problem, answer
+
+def check_answer(user_answer, level):
+    """回答をチェック"""
+    st.session_state.total_problems += 1
     
     if level == "上級":
-        # 上級：式入力モード
-        st.subheader("式を入力してください")
-        expression = st.text_input("計算式", placeholder="例: 2*x^2 + 3*x + 1", key="hist_expr")
+        # 文字式の場合
+        user_clean = str(user_answer).replace(" ", "").lower()
+        correct_clean = str(st.session_state.correct_answer).replace(" ", "").lower()
         
-        col1, col2 = st.columns(2)
-        with col1:
-            x_value = st.number_input("xの値", value=1.0, format="%.2f", key="hist_x")
-        with col2:
-            y_value = st.number_input("yの値", value=1.0, format="%.2f", key="hist_y")
-        
-        col_calc, col_clear = st.columns(2)
-        
-        with col_calc:
-            if st.button("計算実行", type="primary", key="hist_calc_adv"):
-                if expression:
-                    result = calculate_expression(expression, x_value, y_value)
-                    if result is not None:
-                        calculation = f"{expression} (x={x_value}, y={y_value}) = {result}"
-                        st.session_state.calculation_history.append(calculation)
-                        st.success(f"結果: **{result}**")
-                        st.rerun()
-                    else:
-                        st.error("式の計算でエラーが発生しました")
-                else:
-                    st.warning("計算式を入力してください")
-        
-        with col_clear:
-            if st.button("履歴クリア", key="hist_clear_adv"):
-                st.session_state.calculation_history = []
-                st.rerun()
+        # 数値かどうかチェック
+        try:
+            user_num = float(user_answer)
+            correct_num = float(st.session_state.correct_answer)
+            is_correct = abs(user_num - correct_num) < 0.01
+        except:
+            # 文字式として比較
+            is_correct = user_clean == correct_clean or check_equivalent_expressions(user_clean, correct_clean)
     else:
-        # 初級・中級：通常モード
-        col1, col2, col3 = st.columns(3)
-        
-        with col1:
-            num1 = st.number_input("数値1", value=0.0, format="%.2f", key="hist_num1")
-        
-        with col2:
-            if level == "初級":
-                operations = ["+", "-", "×", "÷"]
-            else:  # 中級
-                operations = ["+", "-", "×", "÷", "^", "√"]
-            operation = st.selectbox("演算子", operations, key="hist_op")
-        
-        with col3:
-            if operation == "√":
-                st.write("√の計算（数値1の平方根）")
-                num2 = None
-            else:
-                num2 = st.number_input("数値2", value=0.0, format="%.2f", key="hist_num2")
-        
-        col_calc, col_clear = st.columns(2)
-        
-        with col_calc:
-            if st.button("計算実行", type="primary", key="hist_calc"):
-                result = calculate(num1, operation, num2)
-                if result is not None:
-                    if operation == "√":
-                        calculation = f"√{num1} = {result}"
-                    else:
-                        calculation = f"{num1} {operation} {num2} = {result}"
-                    st.session_state.calculation_history.append(calculation)
-                    st.success(f"結果: **{result}**")
-                    st.rerun()
-                else:
-                    st.error("計算エラーが発生しました")
-        
-        with col_clear:
-            if st.button("履歴クリア"):
-                st.session_state.calculation_history = []
-                st.rerun()
+        # 初級・中級は数値比較
+        try:
+            is_correct = abs(float(user_answer) - float(st.session_state.correct_answer)) < 0.01
+        except:
+            is_correct = False
     
-    # 履歴表示
-    if st.session_state.calculation_history:
-        st.subheader("計算履歴")
-        for i, calc in enumerate(reversed(st.session_state.calculation_history[-10:]), 1):
-            st.write(f"{i}. {calc}")
+    if is_correct:
+        st.session_state.score += 1
+
+def check_equivalent_expressions(user_expr, correct_expr):
+    """数学的に等価な式かチェック（簡易版）"""
+    # 順序の違いを許容（例：x^2+3x+2 と 3x+x^2+2）
+    try:
+        # 基本的な項の順序違いをチェック
+        user_terms = set(re.findall(r'[^+\-]+', user_expr))
+        correct_terms = set(re.findall(r'[^+\-]+', correct_expr))
+        return user_terms == correct_terms
+    except:
+        return False
 
 def show_tips():
     """使い方のヒント"""
     with st.expander("💡 使い方のヒント"):
         st.write("""
-        **レベル別機能**:
-        - **初級**: 基本四則演算（+, -, ×, ÷）
-        - **中級**: 四則演算 + 累乗（^）+ 平方根（√）
-        - **上級**: 文字式計算（x, y使用可）
+        **レベル別問題**:
+        - **初級**: 一桁の数での四則演算
+        - **中級**: 二桁の数での四則演算 + 累乗（2^3など）
+        - **上級**: 文字式の計算・展開・因数分解
         
-        **上級の式入力例**:
-        - `2*x + 3` （一次式）
-        - `x^2 + 2*x + 1` （二次式）
-        - `(x+1)*(x-1)` （因数分解形）
-        - `x^2 + y^2` （二変数）
+        **上級の回答方法**:
+        - 数値の場合: そのまま数字を入力
+        - 式の場合: x^2+3x+2 のように入力
+        - 因数分解: (x+1)(x+2) のように入力
         
-        **計算モード**:
-        - **基本計算**: 単発の計算
-        - **連続計算**: 前の結果を使って続けて計算
-        - **履歴付き計算**: 計算履歴を確認（最新10件）
+        **累乗の書き方**: x^2（x の二乗）
         
-        **注意事項**:
-        - 累乗は x^2 の形式で入力
-        - 0で割る計算はエラー
-        - 負の数の平方根はエラー
+        **練習のコツ**:
+        - 間違えても解説を読んで理解しよう
+        - 同じタイプの問題を繰り返し練習
+        - 正解率を上げることを目標に
         """)
 
 if __name__ == "__main__":
     # ヒント表示
     show_tips()
     
+    # 練習モード選択
+    practice_type = show_practice_mode()
+    
     # メインアプリ実行
     main()
     
     # フッター
     st.markdown("---")
-    st.markdown("*レベル別四則演算アプリ - Streamlit*")
+    st.markdown("*四則演算学習アプリ - がんばって練習しよう！*")
